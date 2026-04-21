@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<StackPane stylesheets="@style.css" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.antchat.client.MainController">
+    <!-- Fond transparent avec design Blob simulé par CSS -->
+    <Region styleClass="blob-bg" />
+
+    <!-- Fenêtre Application Principale (Draggable) -->
+    <StackPane fx:id="mainGlassPanel" styleClass="glass-panel" maxWidth="1000" maxHeight="600" onMousePressed="#onMousePressed" onMouseDragged="#onMouseDragged">
+        
+        <!-- Écran de Connexion -->
+        <VBox fx:id="authScreen" alignment="CENTER" spacing="25" maxWidth="450" maxHeight="400" styleClass="auth-box">
+            <Label text="ANT CHAT" styleClass="brand-title-lg" />
+            <Label text="L'expérience de messagerie futuriste" styleClass="subtitle" />
+            
+            <VBox spacing="15" maxWidth="300">
+                <TextField fx:id="usernameField" promptText="Nom d'utilisateur" styleClass="input-field-glow" />
+                <PasswordField fx:id="passwordField" promptText="Mot de passe" styleClass="input-field-glow" />
+            </VBox>
+            
+            <VBox spacing="10" alignment="CENTER" maxWidth="300">
+                <Button text="Se Connecter" onAction="#onLogin" styleClass="btn, btn-neon" maxWidth="Infinity" />
+                <Button text="Créer un compte" onAction="#onRegister" styleClass="btn, btn-link" />
+            </VBox>
+            
+            <Label fx:id="authMessage" styleClass="error-msg" />
+        </VBox>
+
+        <!-- Écran de Chat -->
+        <HBox fx:id="chatScreen" visible="false" spacing="0">
+            <!-- Barre de Navigation Verticale (PC Style) -->
+            <VBox spacing="20" alignment="TOP_CENTER" styleClass="side-nav-bar" minWidth="70">
+                <padding><Insets top="20" bottom="20"/></padding>
+                
+                <!-- Avatar Utilisateur (Haut) -->
+                <javafx.scene.shape.Circle fx:id="myAvatarCircle" radius="22" styleClass="avatar-glow" />
+                <Label fx:id="myUsername" visible="false" managed="false" /> <!-- Gardé pour le contrôleur -->
+                
+                <Region minHeight="20" />
+                
+                <Button fx:id="tabDiscussionsBtn" text="💬" styleClass="nav-icon, nav-active" onAction="#onTabDiscussions" />
+                <Button fx:id="tabGroupsBtn" text="🏠" styleClass="nav-icon" onAction="#onTabGroups" />
+                <Button fx:id="tabDirectoryBtn" text="👥" styleClass="nav-icon" onAction="#onOpenDirectory" />
+                
+                <Region VBox.vgrow="ALWAYS" />
+                
+                <Button text="📞" styleClass="nav-icon-sm" onAction="#onTabAppels" />
+                <Button text="📣" styleClass="nav-icon-sm" onAction="#onTabActus" />
+                <Button text="🛠" styleClass="nav-icon-sm" onAction="#onTabOutils" />
+                <Button text="⚙️" styleClass="nav-icon-sm" onAction="#onOpenSettings" />
+            </VBox>
+
+            <!-- Sidebar (Contacts/Recherche) -->
+            <VBox minWidth="280" maxWidth="280" styleClass="sidebar">
+                <HBox alignment="CENTER_LEFT" spacing="10">
+                    <padding><Insets top="20" left="20" bottom="10"/></padding>
+                    <Label text="Messages" styleClass="sidebar-header-title" HBox.hgrow="ALWAYS" maxWidth="Infinity" />
+                    <Button text="+" onAction="#onNewGroup" styleClass="btn-plus-neon" />
+                </HBox>
+                
+                <TextField fx:id="searchField" promptText="Rechercher une discussion..." styleClass="search-input-neon">
+                    <VBox.margin><Insets left="15" right="15" bottom="10"/></VBox.margin>
+                </TextField>
+                
+                <ListView fx:id="contactListView" VBox.vgrow="ALWAYS" styleClass="neon-list" />
+                
+                <Label fx:id="placeholderTabLbl" text="" visible="false" alignment="CENTER" maxWidth="Infinity" styleClass="placeholder-label" />
+            </VBox>
+
+            <!-- Chat Area -->
+            <VBox HBox.hgrow="ALWAYS" styleClass="chat-area">
+                <HBox alignment="CENTER_LEFT" styleClass="chat-header-modern" spacing="15">
+                    <javafx.scene.shape.Circle fx:id="chatHeaderAvatar" radius="18" />
+                    <VBox alignment="CENTER_LEFT">
+                        <Label fx:id="currentChatName" text="ANT CHAT" styleClass="chat-title-modern" />
+                        <Label text="Discussion sécurisée" styleClass="chat-subtitle" />
+                    </VBox>
+                    <Region HBox.hgrow="ALWAYS" />
+                    <Button fx:id="btnAddMember" text="+" onAction="#onAddMember" styleClass="btn-plus-neon" visible="false" />
+                    <Button text="—" styleClass="btn-minimize" onAction="#onClose" />
+                    <Button text="✕" onAction="#onClose" styleClass="btn-close-modern" />
+                </HBox>
+
+                <StackPane VBox.vgrow="ALWAYS">
+                    <!-- Zone de messages -->
+                    <ScrollPane fx:id="messagesScrollPane" fitToWidth="true" styleClass="messages-scroll-neon" visible="false">
+                        <VBox fx:id="messagesContainer" spacing="15" styleClass="messages-container-neon" />
+                    </ScrollPane>
+
+                    <!-- État Vide (Placeholder) -->
+                    <VBox fx:id="emptyChatPlaceholder" alignment="CENTER" spacing="20" styleClass="empty-placeholder">
+                        <Label text="✦" style="-fx-font-size: 60px; -fx-text-fill: #bf00ff; -fx-opacity: 0.3;" />
+                        <Label text="Sélectionnez une discussion pour commencer" styleClass="placeholder-text" />
+                    </VBox>
+                </StackPane>
+
+                <HBox spacing="10" styleClass="input-area-neon" visible="false" fx:id="messageInputArea" alignment="CENTER">
+                    <Button text="+" onAction="#onAttachMedia" styleClass="btn-plus-neon" />
+                    <Button text="😊" onAction="#onOpenEmojiPicker" styleClass="btn-plus-neon" />
+                    <TextField fx:id="messageField" promptText="Écrivez votre message..." HBox.hgrow="ALWAYS" styleClass="chat-input-neon" onAction="#onSendMessage" />
+                    <Button text="✦" onAction="#onSendMessage" styleClass="btn-send-neon" />
+                </HBox>
+            </VBox>
+        </HBox>
+
+        <!-- Écran de Paramètres -->
+        <VBox fx:id="settingsScreen" visible="false" alignment="CENTER" spacing="25" maxWidth="450" maxHeight="500" styleClass="settings-box">
+            <Label text="Profil Utilisateur" styleClass="brand-title-lg" />
+            
+            <VBox alignment="CENTER" spacing="10">
+                <javafx.scene.shape.Circle fx:id="settingsAvatarPreview" radius="50" styleClass="avatar-glow-big" />
+                <Button text="Changer la photo" onAction="#onPickAvatarFile" styleClass="btn, btn-link" />
+            </VBox>
+            
+            <VBox spacing="15" maxWidth="300">
+                <Label text="NOM D'UTILISATEUR" styleClass="field-label" />
+                <TextField fx:id="settingsUsernameField" promptText="Nouveau Pseudo" styleClass="input-field-glow" />
+                
+                <Label text="URL PHOTO (OPTIONNEL)" styleClass="field-label" />
+                <TextField fx:id="settingsUrlField" promptText="https://..." styleClass="input-field-glow" />
+            </VBox>
+            
+            <HBox spacing="15" alignment="CENTER" maxWidth="300">
+                <Button text="Annuler" onAction="#onCloseSettings" styleClass="btn, btn-link" />
+                <Button text="Enregistrer" onAction="#onSaveSettings" styleClass="btn, btn-neon" HBox.hgrow="ALWAYS" maxWidth="Infinity" />
+            </HBox>
+        </VBox>
+        
+    </StackPane>
+</StackPane>
