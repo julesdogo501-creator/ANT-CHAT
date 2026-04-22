@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ANT CHAT</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://unpkg.com/picmo@latest/dist/umd/picmo.js"></script>
+    <script src="https://unpkg.com/@picmo/renderer-web@latest/dist/umd/picmo-renderer-web.js"></script>
+</head>
+<body>
+    <div class="blob-bg">
+        <div class="blob blob1"></div>
+        <div class="blob blob2"></div>
+        <div class="blob blob3"></div>
+    </div>
+
+    <!-- Login/Register Screen -->
+    <div id="auth-screen" class="glass-panel">
+        <div class="brand">
+            <i class="ph-fill ph-chat-circle-text"></i>
+            <h1>ANT CHAT</h1>
+        </div>
+        <p class="subtitle">Connectez-vous pour commencer à discuter</p>
+        
+        <form id="auth-form">
+            <div class="input-group">
+                <i class="ph ph-user"></i>
+                <input type="text" id="username" placeholder="Nom d'utilisateur" required>
+            </div>
+            <div class="input-group">
+                <i class="ph ph-lock-key"></i>
+                <input type="password" id="password" placeholder="Mot de passe" required>
+            </div>
+            
+            <div class="actions">
+                <button type="submit" id="btn-login" class="btn primary">Connexion</button>
+                <button type="button" id="btn-register" class="btn secondary">Créer un compte</button>
+            </div>
+            <p id="auth-message" class="error-msg"></p>
+        </form>
+    </div>
+
+    <!-- Main Chat Interface -->
+    <div id="chat-screen" class="glass-panel hidden">
+        <aside class="sidebar">
+            <div class="user-profile">
+                <div class="avatar" id="my-avatar"></div>
+                <div class="user-info">
+                    <span id="my-username">Username</span>
+                    <span class="status">En ligne</span>
+                </div>
+            </div>
+            
+            <div class="rooms-section">
+                <h3>Discussions</h3>
+                <ul id="contact-list">
+                    <!-- Dynamic contacts -->
+                </ul>
+            </div>
+        </aside>
+        
+        <main class="chat-area">
+            <header class="chat-header">
+                <div class="room-info">
+                    <i class="ph-fill ph-chat-centered-text"></i>
+                    <h2 id="current-chat-name">Sélectionnez une discussion</h2>
+                </div>
+                <div class="header-actions">
+                    <button id="btn-annuaire" class="btn-icon" title="Annuaire des utilisateurs">
+                        <i class="ph-fill ph-address-book"></i>
+                        <span>Annuaire</span>
+                    </button>
+                    <button id="btn-logout" class="btn-icon btn-danger" title="Déconnexion">
+                        <i class="ph-fill ph-sign-out"></i>
+                    </button>
+                </div>
+            </header>
+            
+            <div class="messages" id="messages-container">
+                <div class="empty-state">
+                    <i class="ph-fill ph-chats-teardrop"></i>
+                    <p>Choisissez un contact ou le Chat Global pour discuter</p>
+                </div>
+            </div>
+            
+            <form id="message-form" class="hidden">
+                <button type="button" id="btn-emoji" class="btn-icon-option" title="Emojis">
+                    <i class="ph-fill ph-smiley"></i>
+                </button>
+                <button type="button" id="btn-file" class="btn-icon-option" title="Joindre un fichier">
+                    <i class="ph-fill ph-paperclip"></i>
+                </button>
+                <input type="file" id="file-input" class="hidden">
+                <input type="text" id="message-input" placeholder="Écrivez un message..." autocomplete="off">
+                <button type="submit" class="btn-send"><i class="ph-fill ph-paper-plane-right"></i></button>
+            </form>
+        </main>
+    </div>
+
+    <!-- Annuaire Modal -->
+    <div id="annuaire-modal" class="modal hidden">
+        <div class="modal-content glass-panel annuaire-panel">
+            <div class="annuaire-header">
+                <div class="annuaire-title">
+                    <i class="ph-fill ph-address-book"></i>
+                    <h3>Annuaire des utilisateurs</h3>
+                </div>
+                <button id="btn-close-annuaire" class="btn-icon-sm">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+            <div class="annuaire-search">
+                <i class="ph ph-magnifying-glass"></i>
+                <input type="text" id="annuaire-search-input" placeholder="Rechercher un utilisateur...">
+            </div>
+            <ul id="annuaire-list" class="annuaire-list">
+                <!-- Dynamic list -->
+            </ul>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

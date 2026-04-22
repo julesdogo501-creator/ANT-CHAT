@@ -18,7 +18,7 @@ import java.util.function.Consumer;
 
 public class WebSocketService {
     private StompSession stompSession;
-    private final String url = "wss://fourmi-chat-production.up.railway.app/ws/websocket";
+    private final String url = "wss://ant-chat-production.up.railway.app/ws/websocket";
 
     // File d'attente pour les souscriptions de groupes arrivées avant la connexion
     private final CopyOnWriteArrayList<PendingGroupSubscription> pendingGroupSubs = new CopyOnWriteArrayList<>();

@@ -75,7 +75,7 @@ public class MainController {
     private final WebSocketService wsService = new WebSocketService();
     private final ObjectMapper mapper = new ObjectMapper();
     private final HttpClient httpClient = HttpClient.newHttpClient();
-    private final String API_URL = "https://fourmi-chat-production.up.railway.app/api";
+    private final String API_URL = "https://ant-chat-production.up.railway.app/api";
 
     // --- CACHES & HISTORIES ---
     private final Map<Long, VBox> privateHistories = new HashMap<>();
@@ -529,7 +529,7 @@ public class MainController {
 
         if (msg.getFileUrl() != null && !msg.getFileUrl().isEmpty()) {
             try {
-                String url = msg.getFileUrl().startsWith("http") ? msg.getFileUrl() : API_URL.replace("/api", "") + msg.getFileUrl();
+                String url = msg.getFileUrl().startsWith("http") ? msg.getFileUrl() : "https://ant-chat-production.up.railway.app" + msg.getFileUrl();
                 if (msg.getFileType() != null && msg.getFileType().startsWith("image/")) {
                     ImageView iv = new ImageView();
                     iv.setFitWidth(250);
