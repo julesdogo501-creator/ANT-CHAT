@@ -46,6 +46,8 @@ public class AuthController {
                 Map<String, Object> response = new HashMap<>();
                 response.put("id", user.getId());
                 response.put("username", user.getUsername());
+                response.put("profilePictureUrl", user.getProfilePictureUrl());
+                response.put("online", user.isOnline());
                 response.put("message", "Connexion réussie");
                 return ResponseEntity.ok(response);
             }

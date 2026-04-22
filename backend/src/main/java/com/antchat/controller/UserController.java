@@ -44,7 +44,7 @@ public class UserController {
 
     @GetMapping("/history/global")
     public List<Message> getGlobalHistory() {
-        return messageRepository.findByReceiverIsNullOrderByTimestampAsc();
+        return messageRepository.findGlobalMessages();
     }
 
     @GetMapping("/history/private/{user1Id}/{user2Id}")

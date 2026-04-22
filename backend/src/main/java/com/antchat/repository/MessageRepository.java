@@ -11,8 +11,9 @@ import java.util.List;
 
 @Repository
 public interface MessageRepository extends JpaRepository<Message, Long> {
-    // Récupérer les messages du chat global
-    List<Message> findByReceiverIsNullOrderByTimestampAsc();
+    // Récupérer les messages du chat global (ni privés ni de groupe)
+    @Query("SELECT m FROM Message m WHERE m.receiver IS NULL AND m.chatGroup IS NULL ORDER BY m.timestamp ASC")
+    List<Message> findGlobalMessages();
 
     // Récupérer les messages privés entre deux utilisateurs
     @Query("SELECT m FROM Message m WHERE (m.sender = :user1 AND m.receiver = :user2) OR (m.sender = :user2 AND m.receiver = :user1) ORDER BY m.timestamp ASC")

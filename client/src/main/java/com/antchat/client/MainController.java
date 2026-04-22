@@ -75,7 +75,7 @@ public class MainController {
     private final WebSocketService wsService = new WebSocketService();
     private final ObjectMapper mapper = new ObjectMapper();
     private final HttpClient httpClient = HttpClient.newHttpClient();
-    private final String API_URL = "http://localhost:8080/api";
+    private final String API_URL = "https://fourmi-chat-production.up.railway.app/api";
 
     // --- CACHES & HISTORIES ---
     private final Map<Long, VBox> privateHistories = new HashMap<>();
@@ -382,8 +382,11 @@ public class MainController {
 
         dialog.showAndWait().ifPresent(name -> {
             // Fix: Ne JAMAIS bloquer le thread FX avec httpClient.send()
+            String encodedName;
+            try { encodedName = java.net.URLEncoder.encode(name, java.nio.charset.StandardCharsets.UTF_8); }
+            catch (Exception ex) { encodedName = name.replace(" ", "%20"); }
             HttpRequest req = HttpRequest.newBuilder()
-                .uri(URI.create(API_URL + "/groups?name=" + name.replace(" ", "%20") + "&adminId=" + currentUser.getId()))
+                .uri(URI.create(API_URL + "/groups?name=" + encodedName + "&adminId=" + currentUser.getId()))
                 .POST(HttpRequest.BodyPublishers.noBody())
                 .build();
 
@@ -526,7 +529,7 @@ public class MainController {
 
         if (msg.getFileUrl() != null && !msg.getFileUrl().isEmpty()) {
             try {
-                String url = msg.getFileUrl().startsWith("http") ? msg.getFileUrl() : "http://localhost:8080" + msg.getFileUrl();
+                String url = msg.getFileUrl().startsWith("http") ? msg.getFileUrl() : API_URL.replace("/api", "") + msg.getFileUrl();
                 if (msg.getFileType() != null && msg.getFileType().startsWith("image/")) {
                     ImageView iv = new ImageView();
                     iv.setFitWidth(250);

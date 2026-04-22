@@ -13,11 +13,17 @@ import org.springframework.web.socket.sockjs.client.WebSocketTransport;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
 public class WebSocketService {
     private StompSession stompSession;
-    private final String url = "ws://localhost:8080/ws/websocket";
+    private final String url = "wss://fourmi-chat-production.up.railway.app/ws/websocket";
+
+    // File d'attente pour les souscriptions de groupes arrivées avant la connexion
+    private final CopyOnWriteArrayList<PendingGroupSubscription> pendingGroupSubs = new CopyOnWriteArrayList<>();
+
+    private record PendingGroupSubscription(Long groupId, Consumer<Message> handler) {}
 
     public void connect(Long currentUserId, Consumer<Message> onPrivateMessage, Consumer<Message> onGroupMessage) {
         StandardWebSocketClient webSocketClient = new StandardWebSocketClient();
@@ -31,7 +37,6 @@ public class WebSocketService {
             public void afterConnected(StompSession session, StompHeaders connectedHeaders) {
                 stompSession = session;
                 System.out.println("✅ CONNECTÉ AU SERVEUR ! (Session: " + session.getSessionId() + ")");
-                
 
                 System.out.println("📡 Souscription au canal Privé (ID=" + currentUserId + ")...");
                 session.subscribe("/topic/private/" + currentUserId, new StompFrameHandler() {
@@ -42,6 +47,12 @@ public class WebSocketService {
                         onPrivateMessage.accept((Message) payload);
                     }
                 });
+
+                // Rejouer les souscriptions de groupes qui attendaient la connexion
+                for (PendingGroupSubscription pending : pendingGroupSubs) {
+                    doSubscribeToGroup(session, pending.groupId(), pending.handler());
+                }
+                pendingGroupSubs.clear();
             }
 
             @Override
@@ -56,7 +67,17 @@ public class WebSocketService {
         });
     }
 
-
+    private void doSubscribeToGroup(StompSession session, Long groupId, Consumer<Message> onGroupMessage) {
+        System.out.println("📡 Souscription au groupe ID=" + groupId);
+        session.subscribe("/topic/group/" + groupId, new StompFrameHandler() {
+            @Override
+            public Type getPayloadType(StompHeaders headers) { return Message.class; }
+            @Override
+            public void handleFrame(StompHeaders headers, Object payload) {
+                onGroupMessage.accept((Message) payload);
+            }
+        });
+    }
 
     public void sendPrivateMessage(Long senderId, Long receiverId, String content) {
         sendPrivateMessage(senderId, receiverId, content, null, null);
@@ -73,15 +94,12 @@ public class WebSocketService {
 
     public void subscribeToGroup(Long groupId, Consumer<Message> onGroupMessage) {
         if (stompSession != null && stompSession.isConnected()) {
-            System.out.println("📡 Souscription au groupe ID=" + groupId);
-            stompSession.subscribe("/topic/group/" + groupId, new StompFrameHandler() {
-                @Override
-                public Type getPayloadType(StompHeaders headers) { return Message.class; }
-                @Override
-                public void handleFrame(StompHeaders headers, Object payload) {
-                    onGroupMessage.accept((Message) payload);
-                }
-            });
+            // Session déjà active : souscription directe
+            doSubscribeToGroup(stompSession, groupId, onGroupMessage);
+        } else {
+            // Session pas encore prête : mise en file d'attente
+            System.out.println("⏳ Groupe " + groupId + " mis en attente de connexion WebSocket");
+            pendingGroupSubs.add(new PendingGroupSubscription(groupId, onGroupMessage));
         }
     }
 

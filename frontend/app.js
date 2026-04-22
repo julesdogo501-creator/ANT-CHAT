@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:8080/api';
+const API_URL = 'https://fourmi-chat-production.up.railway.app/api';
 let stompClient = null;
 let currentUser = null;
 let currentChatUserId = null; // null => Global, id => Private
@@ -101,7 +101,7 @@ function initFileUpload() {
         formData.append('file', file);
 
         try {
-            const res = await fetch(`http://localhost:8080/api/files/upload`, {
+            const res = await fetch(`${API_URL}/files/upload`, {
                 method: 'POST',
                 body: formData
             });
@@ -117,7 +117,7 @@ function initFileUpload() {
 
 // ─── WebSocket ─────────────────────────────────────────────────────────
 function connectWebSocket() {
-    const socket = new SockJS('http://localhost:8080/ws');
+    const socket = new SockJS('https://fourmi-chat-production.up.railway.app/ws');
     stompClient = Stomp.over(socket);
     stompClient.debug = null;
 
@@ -231,7 +231,7 @@ function displayMessage(message) {
     let contentHtml = `<div class="msg-bubble">${message.content}</div>`;
     
     if (message.fileUrl) {
-        const fullUrl = `http://localhost:8080${message.fileUrl}`;
+        const fullUrl = message.fileUrl.startsWith('http') ? message.fileUrl : `https://fourmi-chat-production.up.railway.app${message.fileUrl}`;
         if (message.fileType && message.fileType.startsWith('image/')) {
             contentHtml = `<div class="msg-bubble">
                 <img src="${fullUrl}" class="msg-img" onclick="window.open('${fullUrl}')">

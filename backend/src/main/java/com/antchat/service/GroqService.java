@@ -15,7 +15,8 @@ import java.util.Map;
 @Service
 public class GroqService {
 
-    private final String API_KEY = "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";
+    @org.springframework.beans.factory.annotation.Value("${groq.api.key}")
+    private String API_KEY;
     private final String GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private final ObjectMapper mapper = new ObjectMapper();
