@@ -26,9 +26,11 @@ public class Message {
     @JoinColumn(name = "group_id")
     private ChatGroup chatGroup;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(nullable = false, columnDefinition = "LONGTEXT")
     private String content;
 
+    @Lob
+    @Column(columnDefinition = "LONGTEXT")
     private String fileUrl;
     private String fileType;
 

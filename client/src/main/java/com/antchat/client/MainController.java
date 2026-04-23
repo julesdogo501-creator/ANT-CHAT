@@ -79,12 +79,15 @@ public class MainController {
 
     // --- CACHES & HISTORIES ---
     private final Map<Long, VBox> privateHistories = new HashMap<>();
-    private final Map<Long, VBox> groupHistories = new HashMap<>();
+    private final Map<Long, VBox> groupHistories   = new HashMap<>();
+    // Track des conversations dont l'historique HTTP a déjà été chargé
+    private final java.util.Set<String> historyLoaded = java.util.Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     // --- TEMP DATA ---
-    private String pendingFileUrl = null;
+    private String pendingFileUrl  = null;
     private String pendingFileType = null;
     private double xOffset = 0, yOffset = 0;
+
 
     // =========================================================================
     // INITIALIZATION & AUTHENTICATION
@@ -138,9 +141,8 @@ public class MainController {
         chatScreen.setVisible(true);
         myUsername.setText(currentUser.getUsername());
         
-        // Couleur avatar perso
-        int hashMe = Math.abs(currentUser.getUsername().hashCode());
-        myAvatarCircle.setFill(javafx.scene.paint.Color.rgb(hashMe % 150 + 50, (hashMe >> 8) % 150 + 50, (hashMe >> 16) % 150 + 50));
+        // Affichage de la photo de profil perso
+        updateAvatar(myAvatarCircle, currentUser);
 
         // Configuration ListView
         setupListView();
@@ -159,21 +161,17 @@ public class MainController {
     private void setupListView() {
         contactListView.setPlaceholder(new Label("Aucun élément trouvé 😕"));
         contactListView.setCellFactory(lv -> new ListCell<ChatItem>() {
-            private final HBox layout = new HBox(15);
-            private final ImageView avatar = new ImageView();
-            private final VBox textLayout = new VBox(3);
+            private final Circle avatar = new Circle(22);
             private final Label nameLabel = new Label();
             private final Label statusLabel = new Label();
+            private final VBox textLayout = new VBox(2);
+            private final HBox layout = new HBox(15);
             {
-                avatar.setFitWidth(44); avatar.setFitHeight(44);
-                javafx.scene.shape.Rectangle clip = new javafx.scene.shape.Rectangle(44, 44);
-                clip.setArcWidth(44); clip.setArcHeight(44);
-                avatar.setClip(clip);
+                nameLabel.getStyleClass().add("sidebar-item-title");
+                statusLabel.getStyleClass().add("sidebar-item-status");
                 layout.setAlignment(Pos.CENTER_LEFT);
-                layout.setPadding(new javafx.geometry.Insets(10, 15, 10, 15));
-                HBox.setHgrow(textLayout, Priority.ALWAYS);
-                nameLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 15px;");
-                statusLabel.setStyle("-fx-text-fill: #666; -fx-font-size: 12px;");
+                layout.setPadding(new Insets(10, 15, 10, 15));
+                avatar.getStyleClass().add("avatar-glow");
                 textLayout.getChildren().addAll(nameLabel, statusLabel);
                 layout.getChildren().addAll(avatar, textLayout);
             }
@@ -186,13 +184,11 @@ public class MainController {
                     nameLabel.setText(item.getName());
                     if (item.isGroup()) {
                         statusLabel.setText("Groupe - " + item.getGroup().getMembers().size() + " membres");
-                        avatar.setStyle("-fx-effect: dropshadow(three-pass-box, #bf00ff, 10, 0, 0, 0);");
-                        updateAvatarImageView(avatar, null);
+                        updateAvatar(avatar, null);
                     } else {
                         User u = item.getUser();
-                        avatar.setStyle("");
                         statusLabel.setText(u.getId() == null ? "Chat ouvert à tous" : (u.isOnline() ? "En ligne" : "Hors ligne"));
-                        updateAvatarImageView(avatar, u);
+                        updateAvatar(avatar, u);
                     }
                     setGraphic(layout);
                 }
@@ -201,17 +197,19 @@ public class MainController {
 
         contactListView.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal != null && !isSwitchingTab) {
-                if (isDirectoryMode) {
-                    ChatItem existing = activeChats.stream().filter(c -> c.equals(newVal)).findFirst().orElse(null);
-                    if (existing == null) {
-                        activeChats.add(0, newVal);
-                        existing = newVal;
+                Platform.runLater(() -> {
+                    if (isDirectoryMode) {
+                        ChatItem existing = activeChats.stream().filter(c -> c.equals(newVal)).findFirst().orElse(null);
+                        if (existing == null) {
+                            activeChats.add(0, newVal);
+                            existing = newVal;
+                        }
+                        onTabDiscussions();
+                        contactListView.getSelectionModel().select(existing);
+                    } else {
+                        selectChat(newVal);
                     }
-                    onTabDiscussions();
-                    ChatItem finalItem = existing;
-                    Platform.runLater(() -> contactListView.getSelectionModel().select(finalItem));
-                }
-                selectChat(newVal);
+                });
             }
         });
     }
@@ -226,6 +224,8 @@ public class MainController {
 
     private void switchTab(String mode) {
         isSwitchingTab = true;
+        contactListView.getSelectionModel().clearSelection();
+        
         isDirectoryMode = mode.equals("DIRECTORY");
         isGroupsMode = mode.equals("GROUPS");
 
@@ -238,17 +238,17 @@ public class MainController {
             case "GROUPS":
                 tabGroupsBtn.getStyleClass().add("nav-active");
                 source = groupChats;
-                contactListView.setPlaceholder(new Label("Aucun groupe. Créez-en un !"));
+                contactListView.setPlaceholder(new Label("Aucun groupe."));
                 break;
             case "DIRECTORY":
                 tabDirectoryBtn.getStyleClass().add("nav-active");
                 source = allUsers;
-                contactListView.setPlaceholder(new Label("Personne dans l'annuaire..."));
+                contactListView.setPlaceholder(new Label("Annuaire vide."));
                 break;
             default:
                 tabDiscussionsBtn.getStyleClass().add("nav-active");
                 source = activeChats;
-                contactListView.setPlaceholder(new Label("Aucune discussion active."));
+                contactListView.setPlaceholder(new Label("Aucune discussion."));
                 break;
         }
 
@@ -286,7 +286,10 @@ public class MainController {
             VBox vb = new VBox(10); vb.setId("HistoryGroup_" + g.getId());
             groupHistories.putIfAbsent(g.getId(), vb);
             historyBox = groupHistories.get(g.getId());
-            if (historyBox.getChildren().isEmpty()) fetchAndDisplayHistory("/groups/" + g.getId() + "/history", historyBox);
+            String key = "group_" + g.getId();
+            if (historyLoaded.add(key)) { // add() retourne false si déjà présent
+                fetchAndDisplayHistory("/groups/" + g.getId() + "/history", historyBox);
+            }
         } else {
             User u = item.getUser();
             currentChatName.setText(u.getUsername());
@@ -294,7 +297,10 @@ public class MainController {
             VBox vb = new VBox(10); vb.setId("HistoryPrivate_" + u.getId());
             privateHistories.putIfAbsent(u.getId(), vb);
             historyBox = privateHistories.get(u.getId());
-            if (historyBox.getChildren().isEmpty()) fetchAndDisplayHistory("/users/history/private/" + currentUser.getId() + "/" + u.getId(), historyBox);
+            String key = "private_" + u.getId();
+            if (historyLoaded.add(key)) { // add() retourne false si déjà présent
+                fetchAndDisplayHistory("/users/history/private/" + currentUser.getId() + "/" + u.getId(), historyBox);
+            }
         }
         historyBox.getStyleClass().add("messages-container-neon");
         messagesScrollPane.setContent(historyBox);
@@ -307,18 +313,23 @@ public class MainController {
                 HttpResponse<String> res = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
                 if (res.statusCode() == 200) {
                     List<Message> history = mapper.readValue(res.body(), new TypeReference<List<Message>>() {});
-                    Platform.runLater(() -> {
-                        List<javafx.scene.Node> nodes = new java.util.ArrayList<>();
-                        for (Message m : history) {
-                            javafx.scene.Node node = createMessageNode(m);
-                            if (node != null) nodes.add(node);
-                        }
-                        container.getChildren().setAll(nodes); // Batching pour éviter le spam Pulse !
-                        
-                        if (messagesScrollPane.getContent() == container) {
-                            messagesScrollPane.setVvalue(1.0);
-                        }
-                    });
+
+                    // Créer tous les noeuds UI dans le thread d'arrière-plan
+                    List<javafx.scene.Node> nodes = new java.util.ArrayList<>();
+                    for (Message m : history) {
+                        javafx.scene.Node node = createMessageNode(m);
+                        if (node != null) nodes.add(node);
+                    }
+
+                    if (!nodes.isEmpty()) {
+                        // Ajouter TOUS les noeuds en un seul Platform.runLater (évite les NPE de ScenePulse)
+                        Platform.runLater(() -> {
+                            container.getChildren().setAll(nodes);
+                            if (messagesScrollPane.getContent() == container) {
+                                messagesScrollPane.setVvalue(1.0);
+                            }
+                        });
+                    }
                 }
             } catch (Exception e) { e.printStackTrace(); }
         }).start();
@@ -414,10 +425,32 @@ public class MainController {
         overlay.setStyle("-fx-background-color: rgba(20, 20, 25, 0.95); -fx-padding: 20; -fx-background-radius: 15;");
         overlay.setPrefSize(300, 400);
         Label title = new Label("Inviter un membre");
-        title.setStyle("-fx-text-fill: white; -fx-font-weight: bold;");
+        title.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 16px;");
+        
         ListView<ChatItem> list = new ListView<>(allUsers);
-        list.getStyleClass().add("neon-list");
+        list.setPlaceholder(new Label("Aucun autre utilisateur trouvé."));
+        list.setStyle("-fx-background-color: #12121a; -fx-control-inner-background: #12121a; -fx-background-insets: 0; -fx-border-color: rgba(255,255,255,0.1);");
+        list.setCellFactory(lv -> new ListCell<ChatItem>() {
+            private final Circle avatar = new Circle(14);
+            private final Label name = new Label();
+            private final HBox layout = new HBox(10, avatar, name);
+            { layout.setAlignment(Pos.CENTER_LEFT); layout.setPadding(new Insets(5, 10, 5, 10)); name.setStyle("-fx-text-fill: white; -fx-font-weight: bold;"); }
+            @Override
+            protected void updateItem(ChatItem item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setGraphic(null);
+                    setStyle("-fx-background-color: transparent;");
+                } else {
+                    name.setText(item.getName());
+                    updateAvatar(avatar, item.getUser());
+                    setGraphic(layout);
+                    setStyle("-fx-background-color: transparent; -fx-cursor: hand;");
+                }
+            }
+        });
         Button close = new Button("Fermer");
+        close.setStyle("-fx-background-color: rgba(255,255,255,0.1); -fx-text-fill: white; -fx-cursor: hand;");
         overlay.getChildren().addAll(title, list, close);
         
         javafx.stage.Popup popup = new javafx.stage.Popup();
@@ -447,7 +480,12 @@ public class MainController {
         String text = messageField.getText().trim();
         if (text.isEmpty() && pendingFileUrl == null) return;
         
-        System.out.println("DEBUG: Envoi de message -> " + text);
+        // Si on envoie un fichier sans texte, on met un placeholder pour le contenu
+        if (text.isEmpty() && pendingFileUrl != null) {
+            text = "[Fichier]";
+        }
+
+        System.out.println("DEBUG: Envoi de message -> " + text + " (File: " + pendingFileUrl + ")");
         if (selectedItem != null) {
             if (selectedItem.isGroup()) {
                 wsService.sendGroupMessage(currentUser.getId(), selectedItem.getGroup().getId(), text, pendingFileUrl, pendingFileType);
@@ -455,7 +493,10 @@ public class MainController {
                 wsService.sendPrivateMessage(currentUser.getId(), selectedItem.getUser().getId(), text, pendingFileUrl, pendingFileType);
             }
         }
-        messageField.clear(); pendingFileUrl = null; pendingFileType = null;
+        messageField.clear(); 
+        messageField.setPromptText("Écrivez votre message...");
+        pendingFileUrl = null; 
+        pendingFileType = null;
     }
 
     private void onPrivateMessageReceived(Message msg) {
@@ -529,24 +570,104 @@ public class MainController {
 
         if (msg.getFileUrl() != null && !msg.getFileUrl().isEmpty()) {
             try {
-                String url = msg.getFileUrl().startsWith("http") ? msg.getFileUrl() : "https://ant-chat-production.up.railway.app" + msg.getFileUrl();
-                if (msg.getFileType() != null && msg.getFileType().startsWith("image/")) {
+                String fileUrl = (msg.getFileUrl().startsWith("http") || msg.getFileUrl().startsWith("data:"))
+                    ? msg.getFileUrl()
+                    : "https://ant-chat-production.up.railway.app" + msg.getFileUrl();
+                String fileType = msg.getFileType() != null ? msg.getFileType().toLowerCase() : "";
+                String lowerUrl = fileUrl.toLowerCase();
+                String fileName = fileUrl.contains("_") ? fileUrl.substring(fileUrl.lastIndexOf('_') + 1) : fileUrl.substring(fileUrl.lastIndexOf('/') + 1);
+                if (fileName.length() > 28) fileName = fileName.substring(0, 25) + "...";
+
+                boolean isImage = fileType.startsWith("image/") || lowerUrl.endsWith(".png") || lowerUrl.endsWith(".jpg") || lowerUrl.endsWith(".jpeg") || lowerUrl.endsWith(".gif") || lowerUrl.endsWith(".webp");
+
+                if (isImage) {
+                    System.out.println("DEBUG: Affichage image -> " + (fileUrl.length() > 100 ? fileUrl.substring(0, 50) + "..." : fileUrl));
                     ImageView iv = new ImageView();
-                    iv.setFitWidth(250);
+                    iv.setFitWidth(220);
                     iv.setPreserveRatio(true);
-                    Image img = new Image(url, true); // Asynchrone natif sans setCache
-                    iv.setImage(img);
-                    iv.setOnMouseClicked(e -> { try { java.awt.Desktop.getDesktop().browse(URI.create(url)); } catch (Exception ex) {} });
+                    iv.setSmooth(true);
+                    iv.setCache(true);
+                    iv.setStyle("-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 8, 0, 0, 2); -fx-cursor: hand;");
+                    
+                    loadSafeImage(iv, fileUrl, 600, content);
+                    
+                    final String finalUrl = fileUrl;
+                    iv.setOnMouseClicked(e -> { 
+                        if (!finalUrl.startsWith("data:")) {
+                            try { java.awt.Desktop.getDesktop().browse(URI.create(finalUrl)); } catch (Exception ex) {} 
+                        }
+                    });
                     content.getChildren().add(iv);
+
+                } else if (fileType.startsWith("audio/")) {
+                    // --- Audio : lecteur compact ---
+                    HBox audioBox = new HBox(8);
+                    audioBox.setAlignment(Pos.CENTER_LEFT);
+                    audioBox.setStyle("-fx-background-color: rgba(191,0,255,0.15); -fx-background-radius: 12; -fx-padding: 8 14 8 14; -fx-border-color: rgba(191,0,255,0.3); -fx-border-radius: 12;");
+                    Label icon = new Label("🎵");
+                    icon.setStyle("-fx-font-size: 18px;");
+                    Label durLabel = new Label("Audio");
+                    durLabel.setStyle("-fx-text-fill: #ccc; -fx-font-size: 11px;");
+                    Button playBtn = new Button("▶");
+                    playBtn.setStyle("-fx-background-color: #bf00ff; -fx-text-fill: white; -fx-background-radius: 50%; -fx-min-width: 30; -fx-min-height: 30; -fx-font-size: 12px; -fx-cursor: hand;");
+                    final String audioFinal = fileUrl;
+                    final javafx.scene.media.MediaPlayer[] playerRef = {null};
+                    playBtn.setOnAction(e -> {
+                        try {
+                            if (playerRef[0] != null) {
+                                playerRef[0].stop();
+                                playerRef[0].dispose();
+                                playerRef[0] = null;
+                                playBtn.setText("▶");
+                                return;
+                            }
+                            javafx.scene.media.Media media = new javafx.scene.media.Media(audioFinal);
+                            playerRef[0] = new javafx.scene.media.MediaPlayer(media);
+                            playerRef[0].setOnEndOfMedia(() -> Platform.runLater(() -> { playBtn.setText("▶"); playerRef[0] = null; }));
+                            playerRef[0].play();
+                            playBtn.setText("■");
+                        } catch (Exception ex) {
+                            try { java.awt.Desktop.getDesktop().browse(URI.create(audioFinal)); } catch (Exception ex2) {}
+                        }
+                    });
+                    Label dlBtn = new Label("⬇");
+                    dlBtn.setStyle("-fx-text-fill: #bf00ff; -fx-font-size: 14px; -fx-cursor: hand; -fx-padding: 0 0 0 8;");
+                    dlBtn.setOnMouseClicked(e -> { try { java.awt.Desktop.getDesktop().browse(URI.create(audioFinal)); } catch (Exception ex) {} });
+                    audioBox.getChildren().addAll(icon, playBtn, durLabel, dlBtn);
+                    content.getChildren().add(audioBox);
+
                 } else {
-                    Hyperlink link = new Hyperlink("📎 Fichier");
-                    link.setOnAction(e -> { try { java.awt.Desktop.getDesktop().browse(URI.create(url)); } catch (Exception ex) {} });
-                    content.getChildren().add(link);
+                    // --- Fichier générique : bulle avec icône et bouton télécharger ---
+                    String fileIcon = fileType.contains("pdf") ? "📄" :
+                                      fileType.contains("zip") || fileType.contains("compressed") || fileType.contains("rar") ? "🗜️" :
+                                      fileType.contains("video") ? "🎬" :
+                                      fileType.contains("text") || fileType.contains("txt") ? "📝" :
+                                      fileType.contains("word") || fileType.contains("doc") ? "📘" :
+                                      fileType.contains("excel") || fileType.contains("sheet") ? "📗" :
+                                      fileType.contains("powerpoint") || fileType.contains("presentation") ? "📙" : "📎";
+                    HBox fileBox = new HBox(10);
+                    fileBox.setAlignment(Pos.CENTER_LEFT);
+                    fileBox.setStyle("-fx-background-color: rgba(255,255,255,0.08); -fx-background-radius: 12; -fx-padding: 10 16 10 16; -fx-border-color: rgba(255,255,255,0.15); -fx-border-radius: 12; -fx-cursor: hand;");
+                    Label iconLbl = new Label(fileIcon);
+                    iconLbl.setStyle("-fx-font-size: 22px;");
+                    VBox fileInfo = new VBox(2);
+                    Label nameLbl = new Label(fileName);
+                    nameLbl.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 12px;");
+                    Label typeLbl = new Label(fileType.isEmpty() ? "fichier" : fileType);
+                    typeLbl.setStyle("-fx-text-fill: #999; -fx-font-size: 10px;");
+                    fileInfo.getChildren().addAll(nameLbl, typeLbl);
+                    Label dlLbl = new Label("⬇");
+                    dlLbl.setStyle("-fx-text-fill: #bf00ff; -fx-font-size: 18px; -fx-padding: 0 0 0 8;");
+                    final String fileFinal = fileUrl;
+                    fileBox.setOnMouseClicked(e -> { try { java.awt.Desktop.getDesktop().browse(URI.create(fileFinal)); } catch (Exception ex) {} });
+                    fileBox.getChildren().addAll(iconLbl, fileInfo, new Region(), dlLbl);
+                    HBox.setHgrow(fileInfo, Priority.ALWAYS);
+                    content.getChildren().add(fileBox);
                 }
             } catch (Exception e) {}
         }
 
-        if (msg.getContent() != null && !msg.getContent().isEmpty() && !msg.getContent().equals("[Fichier]")) {
+        if (msg.getContent() != null && !msg.getContent().isEmpty() && !msg.getContent().startsWith("[Fichier")) {
             TextFlow flow = renderEmojiText(msg.getContent(), isMe ? "msg-bubble-me" : "msg-bubble-other");
             flow.setMaxWidth(350); 
             content.getChildren().add(flow);
@@ -562,53 +683,158 @@ public class MainController {
     // UI HELPERS (AVATARS, EMOJIS, SETTINGS)
     // =========================================================================
 
+    private void loadSafeImage(ImageView iv, String url, int requestedSize, Pane errorContainer) {
+        if (url == null || url.isEmpty()) return;
+
+        new Thread(() -> {
+            try {
+                Image img;
+                if (url.startsWith("data:image")) {
+                    try {
+                        String base64 = url.substring(url.indexOf(",") + 1);
+                        byte[] bytes = java.util.Base64.getDecoder().decode(base64);
+                        img = new Image(new java.io.ByteArrayInputStream(bytes), requestedSize, requestedSize, true, true);
+                    } catch (Exception e) {
+                        System.err.println("Erreur decodage Base64: " + e.getMessage());
+                        img = null;
+                    }
+                } else if (url.startsWith("file:")) {
+                    img = new Image(url, requestedSize, requestedSize, true, true);
+                } else {
+                    img = new Image(url, requestedSize, requestedSize, true, true, false);
+                }
+                
+                if (img != null && !img.isError()) {
+                    final Image finalImg = img;
+                    Platform.runLater(() -> {
+                        try { iv.setImage(finalImg); } catch (Exception e) {}
+                    });
+                } else if (errorContainer != null) {
+                    Platform.runLater(() -> {
+                        String msg = (url.startsWith("data:")) ? "⚠️ Image corrompue" : "⚠️ Image non disponible";
+                        Label err = new Label(msg);
+                        err.setStyle("-fx-text-fill: #ff4444; -fx-font-size: 10px; -fx-background-color: rgba(0,0,0,0.3); -fx-padding: 5;");
+                        errorContainer.getChildren().add(err);
+                    });
+                }
+            } catch (Exception e) { e.printStackTrace(); }
+        }).start();
+    }
+
+    private String compressAndEncodeImage(File file) {
+        try {
+            javafx.scene.image.Image original = new javafx.scene.image.Image(file.toURI().toString());
+            double w = original.getWidth();
+            double h = original.getHeight();
+            
+            double max = 1024;
+            if (w > max || h > max) {
+                if (w > h) { h = (max / w) * h; w = max; }
+                else { w = (max / h) * w; h = max; }
+            }
+            
+            final double finalW = w;
+            final double finalH = h;
+            
+            // Le snapshot DOIT être sur le thread JavaFX
+            java.util.concurrent.CompletableFuture<javafx.scene.image.WritableImage> future = new java.util.concurrent.CompletableFuture<>();
+            Platform.runLater(() -> {
+                try {
+                    ImageView tempIv = new ImageView(original);
+                    tempIv.setFitWidth(finalW);
+                    tempIv.setFitHeight(finalH);
+                    javafx.scene.SnapshotParameters params = new javafx.scene.SnapshotParameters();
+                    params.setFill(javafx.scene.paint.Color.TRANSPARENT);
+                    future.complete(tempIv.snapshot(params, null));
+                } catch (Exception e) {
+                    future.completeExceptionally(e);
+                }
+            });
+            
+            javafx.scene.image.WritableImage resized = future.get(5, java.util.concurrent.TimeUnit.SECONDS);
+            
+            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            javax.imageio.ImageIO.write(javafx.embed.swing.SwingFXUtils.fromFXImage(resized, null), "png", out);
+            
+            return "data:image/png;base64," + java.util.Base64.getEncoder().encodeToString(out.toByteArray());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
     private void updateAvatarImageView(ImageView iv, User user) {
         if (iv == null) return;
-        String url = getSafeAvatarUrl(user);
-        try {
-            Image img = imageCache.computeIfAbsent(url, u -> new Image(u, 60, 60, true, true, true));
-            iv.setImage(img);
-        } catch (Exception e) {}
+        loadSafeImage(iv, getSafeAvatarUrl(user), 60, null);
     }
 
     private void updateAvatar(Circle circle, User user) {
-        if (circle == null || user == null) return;
+        if (circle == null) return;
         String url = getSafeAvatarUrl(user);
-        
-        try {
-            Image img = imageCache.computeIfAbsent(url, u -> new Image(u, 60, 60, true, true, true));
-            
-            if (img.getProgress() == 1.0 && !img.isError()) {
-                try { circle.setFill(new ImagePattern(img)); } catch (Exception e) {}
-                return;
-            }
-            if (img.isError()) { setFallbackAvatar(circle, user); return; }
 
-            img.progressProperty().addListener((obs, oldV, newV) -> {
-                if (newV.doubleValue() == 1.0 && !img.isError()) {
-                    try { circle.setFill(new ImagePattern(img)); } catch (Exception e) {}
-                }
-            });
-            img.errorProperty().addListener((obs, oldV, newV) -> {
-                if (newV) setFallbackAvatar(circle, user);
-            });
-        } catch (Exception e) {
+        // 1. Appliquer le cache immédiatement
+        Image cached = imageCache.get(url);
+        if (cached != null) {
+            circle.setFill(new ImagePattern(cached));
+            return;
+        }
+
+        // 2. Fallback
+        if (!(circle.getFill() instanceof ImagePattern)) {
             setFallbackAvatar(circle, user);
         }
+
+        if (url == null || url.isEmpty()) return;
+
+        new Thread(() -> {
+            try {
+                Image img;
+                if (url.startsWith("data:image")) {
+                    String base64 = url.substring(url.indexOf(",") + 1);
+                    byte[] bytes = java.util.Base64.getDecoder().decode(base64);
+                    img = new Image(new java.io.ByteArrayInputStream(bytes), 120, 120, true, true);
+                } else if (url.startsWith("file:")) {
+                    img = new Image(url, 120, 120, true, true);
+                } else {
+                    img = new Image(url, 120, 120, true, true, false);
+                }
+                
+                if (!img.isError()) {
+                    imageCache.put(url, img);
+                    Platform.runLater(() -> circle.setFill(new ImagePattern(img)));
+                }
+            } catch (Exception e) { e.printStackTrace(); }
+        }).start();
     }
 
     private String getSafeAvatarUrl(User user) {
-        if (user == null) return "https://ui-avatars.com/api/?name=U";
+        if (user == null) return "https://ui-avatars.com/api/?name=U&background=random";
         String url = user.getProfilePictureUrl();
-        if (url == null || url.isEmpty()) return "https://ui-avatars.com/api/?name=" + user.getUsername();
-        if (url.startsWith("data:image/png;base64,/9j/")) {
-            url = url.replace("data:image/png;base64,", "data:image/jpeg;base64,");
+        String name = user.getUsername() != null ? user.getUsername() : "User";
+        
+        if (url == null || url.isEmpty()) {
+            try {
+                return "https://ui-avatars.com/api/?name=" + java.net.URLEncoder.encode(name, "UTF-8") + "&background=random&color=fff";
+            } catch (Exception e) {
+                return "https://ui-avatars.com/api/?name=" + name.replace(" ", "+") + "&background=random";
+            }
         }
+        
+        // Si c'est déjà une URL complète
+        if (url.startsWith("http") || url.startsWith("file:") || url.startsWith("data:")) {
+            return url;
+        }
+        
+        if (url.startsWith("/uploads/")) {
+            return "https://ant-chat-production.up.railway.app" + url;
+        }
+        
         return url;
     }
 
     private void setFallbackAvatar(Circle c, User u) {
-        int hash = Math.abs(u.getUsername().hashCode());
+        String name = (u != null) ? u.getUsername() : "G";
+        int hash = Math.abs(name.hashCode());
         c.setFill(javafx.scene.paint.Color.rgb(hash % 100 + 155, (hash >> 8) % 100 + 100, (hash >> 16) % 100 + 155));
     }
 
@@ -646,49 +872,185 @@ public class MainController {
         });
     }
 
+    // (Méthode popup supprimée — fusionnée avec onOpenSettings FXML ci-dessous)
+
     @FXML public void onAttachMedia() {
         FileChooser fc = new FileChooser();
+        fc.setTitle("Joindre un fichier");
+        fc.getExtensionFilters().addAll(
+            new FileChooser.ExtensionFilter("Tous les fichiers", "*.*"),
+            new FileChooser.ExtensionFilter("Images", "*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp"),
+            new FileChooser.ExtensionFilter("Documents", "*.pdf", "*.docx", "*.xlsx", "*.txt"),
+            new FileChooser.ExtensionFilter("Vidéos", "*.mp4", "*.mkv", "*.avi"),
+            new FileChooser.ExtensionFilter("Audio", "*.mp3", "*.wav", "*.ogg")
+        );
         File file = fc.showOpenDialog(authScreen.getScene().getWindow());
-        if (file != null) new Thread(() -> { try { uploadFile(file); } catch (Exception e) {} }).start();
+        if (file != null) {
+            Platform.runLater(() -> {
+                messageField.setText("");
+                messageField.setPromptText("⬆ Envoi du fichier : " + file.getName() + "...");
+                messageField.setDisable(true);
+            });
+            
+            new Thread(() -> {
+                try { 
+                    String mime = java.nio.file.Files.probeContentType(file.toPath());
+                    if (mime != null && mime.startsWith("image/")) {
+                        // IMAGE -> Compression et Base64 pour persistance Railway
+                        String b64 = compressAndEncodeImage(file);
+                        if (b64 != null) {
+                            Platform.runLater(() -> {
+                                pendingFileUrl = b64;
+                                pendingFileType = "image/png"; // On convertit tout en png pour la compression
+                                onSendMessage();
+                            });
+                        } else {
+                            uploadAndSend(file);
+                        }
+                    } else {
+                        // AUTRE FICHIER -> UPLOAD CLASSIQUE
+                        uploadAndSend(file); 
+                    }
+                } catch (Throwable e) { 
+                    e.printStackTrace(); 
+                    Platform.runLater(() -> {
+                        messageField.setDisable(false);
+                        messageField.setPromptText("Échec de l'envoi");
+                    });
+                } finally {
+                    Platform.runLater(() -> messageField.setDisable(false));
+                }
+            }).start();
+        }
     }
 
-    private void uploadFile(File file) throws Exception {
+    private String uploadFileSync(java.io.File file) throws Exception {
         String boundary = "---" + System.currentTimeMillis();
         byte[] bytes = java.nio.file.Files.readAllBytes(file.toPath());
         String mime = java.nio.file.Files.probeContentType(file.toPath());
-        String body = "--" + boundary + "\r\nContent-Disposition: form-data; name=\"file\"; filename=\"" + file.getName() + "\"\r\nContent-Type: " + (mime != null ? mime : "application/octet-stream") + "\r\n\r\n";
-        byte[] start = body.getBytes(); byte[] end = ("\r\n--" + boundary + "--\r\n").getBytes();
+        if (mime == null) {
+            String name = file.getName().toLowerCase();
+            if      (name.endsWith(".wav")) mime = "audio/wav";
+            else if (name.endsWith(".mp3")) mime = "audio/mpeg";
+            else if (name.endsWith(".ogg")) mime = "audio/ogg";
+            else if (name.endsWith(".png")) mime = "image/png";
+            else if (name.endsWith(".jpg") || name.endsWith(".jpeg")) mime = "image/jpeg";
+            else if (name.endsWith(".gif")) mime = "image/gif";
+            else if (name.endsWith(".webp")) mime = "image/webp";
+            else                            mime = "application/octet-stream";
+        }
+        String body  = "--" + boundary + "\r\nContent-Disposition: form-data; name=\"file\"; filename=\""
+                + file.getName() + "\"\r\nContent-Type: " + mime + "\r\n\r\n";
+        byte[] start = body.getBytes();
+        byte[] end   = ("\r\n--" + boundary + "--\r\n").getBytes();
         byte[] total = new byte[start.length + bytes.length + end.length];
-        System.arraycopy(start, 0, total, 0, start.length); System.arraycopy(bytes, 0, total, start.length, bytes.length); System.arraycopy(end, 0, total, start.length + bytes.length, end.length);
-        HttpRequest req = HttpRequest.newBuilder().uri(URI.create(API_URL + "/files/upload")).header("Content-Type", "multipart/form-data; boundary=" + boundary).POST(HttpRequest.BodyPublishers.ofByteArray(total)).build();
+        System.arraycopy(start, 0, total, 0, start.length);
+        System.arraycopy(bytes, 0, total, start.length, bytes.length);
+        System.arraycopy(end,   0, total, start.length + bytes.length, end.length);
+
+        HttpRequest req = HttpRequest.newBuilder()
+            .uri(URI.create(API_URL + "/files/upload"))
+            .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+            .POST(HttpRequest.BodyPublishers.ofByteArray(total))
+            .build();
         HttpResponse<String> res = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
         if (res.statusCode() == 200) {
             Map<String, String> m = mapper.readValue(res.body(), new TypeReference<Map<String, String>>() {});
-            Platform.runLater(() -> { pendingFileUrl = m.get("url"); pendingFileType = m.get("type"); messageField.setText("[Fichier prêt] " + messageField.getText()); });
+            return m.get("url") + "::" + m.get("type"); // Hack simple pour retourner 2 valeurs
+        }
+        return null;
+    }
+
+    private void uploadAndSend(java.io.File file) throws Exception {
+        String result = uploadFileSync(file);
+        if (result != null) {
+            String[] parts = result.split("::");
+            final String url  = parts[0];
+            final String type = parts.length > 1 ? parts[1] : "";
+            // Envoi immédiat sans passer par le champ texte
+            Platform.runLater(() -> {
+                pendingFileUrl  = url;
+                pendingFileType = type;
+                onSendMessage();
+            });
         }
     }
 
     @FXML public void onOpenSettings() {
         chatScreen.setVisible(false); settingsScreen.setVisible(true);
         settingsUsernameField.setText(currentUser.getUsername());
-        settingsUrlField.setText(currentUser.getProfilePictureUrl());
+
+        String picUrl = currentUser.getProfilePictureUrl();
+        if (picUrl != null && picUrl.startsWith("data:image") && picUrl.length() > 100) {
+            settingsUrlField.setText(picUrl.substring(0, 50) + "...");
+        } else {
+            settingsUrlField.setText(picUrl != null ? picUrl : "");
+        }
+
+        updateAvatar(settingsAvatarPreview, currentUser);
     }
     @FXML public void onCloseSettings() { settingsScreen.setVisible(false); chatScreen.setVisible(true); }
     @FXML public void onSaveSettings() {
         new Thread(() -> {
             try {
-                currentUser.setUsername(settingsUsernameField.getText()); currentUser.setProfilePictureUrl(settingsUrlField.getText());
-                HttpRequest req = HttpRequest.newBuilder().uri(URI.create(API_URL + "/users/" + currentUser.getId())).header("Content-Type", "application/json").PUT(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(currentUser))).build();
-                if (httpClient.send(req, HttpResponse.BodyHandlers.ofString()).statusCode() == 200) Platform.runLater(() -> { myUsername.setText(currentUser.getUsername()); updateAvatar(myAvatarCircle, currentUser); onCloseSettings(); });
-            } catch (Exception e) {}
+                currentUser.setUsername(settingsUsernameField.getText());
+                String newUrl = settingsUrlField.getText();
+
+                // Invalider le cache de l'ANCIENNE URL avant de changer
+                String oldCacheKey = getSafeAvatarUrl(currentUser);
+
+                // Ne pas écraser si c'est la version tronquée affichée ou un état temporaire
+                if (!newUrl.equals("Upload...") && !newUrl.equals("Envoi en cours...") && !newUrl.endsWith("...")) {
+                    currentUser.setProfilePictureUrl(newUrl);
+                }
+
+                HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create(API_URL + "/users/" + currentUser.getId()))
+                    .header("Content-Type", "application/json")
+                    .PUT(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(currentUser)))
+                    .build();
+
+                if (httpClient.send(req, HttpResponse.BodyHandlers.ofString()).statusCode() == 200) {
+                    imageCache.remove(oldCacheKey);
+                    imageCache.remove(getSafeAvatarUrl(currentUser));
+                    Platform.runLater(() -> {
+                        myUsername.setText(currentUser.getUsername());
+                        updateAvatar(myAvatarCircle, currentUser);
+                        updateAvatar(settingsAvatarPreview, currentUser);
+                        onCloseSettings();
+                    });
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }).start();
     }
     @FXML public void onPickAvatarFile() {
         File f = new FileChooser().showOpenDialog(authScreen.getScene().getWindow());
-        if (f != null) try { settingsUrlField.setText("data:image/png;base64," + java.util.Base64.getEncoder().encodeToString(java.nio.file.Files.readAllBytes(f.toPath()))); } catch (Exception e) {}
-    }
+        if (f != null) {
+            try {
+                // 1. Conversion Base64 (nécessaire pour la persistance sur Railway)
+                byte[] bytes = java.nio.file.Files.readAllBytes(f.toPath());
+                String mime = java.nio.file.Files.probeContentType(f.toPath());
+                if (mime == null) mime = "image/png";
+                String base64 = "data:" + mime + ";base64," + java.util.Base64.getEncoder().encodeToString(bytes);
 
-    @FXML public void onTabAppels() {} @FXML public void onTabActus() {} @FXML public void onTabOutils() {}
+                // 2. Preview immédiat
+                Image img = new Image(new java.io.ByteArrayInputStream(bytes), 120, 120, true, true);
+                settingsAvatarPreview.setFill(new ImagePattern(img));
+
+                // 3. Mise à jour de l'objet utilisateur (sera envoyé au prochain "Enregistrer")
+                currentUser.setProfilePictureUrl(base64);
+
+                // 4. Affichage tronqué dans le champ texte
+                settingsUrlField.setText(base64.substring(0, Math.min(base64.length(), 50)) + "...");
+                
+            } catch (Exception e) {
+                e.printStackTrace();
+                settingsUrlField.setText("Erreur de lecture du fichier");
+            }
+        }
+    }
     @FXML public void onClose() { Platform.exit(); System.exit(0); }
     @FXML public void onMousePressed(MouseEvent e) { xOffset = e.getSceneX(); yOffset = e.getSceneY(); }
     @FXML public void onMouseDragged(MouseEvent e) { chatScreen.getScene().getWindow().setX(e.getScreenX() - xOffset); chatScreen.getScene().getWindow().setY(e.getScreenY() - yOffset); }

@@ -3,6 +3,7 @@ package com.antchat.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.LocalDateTime;
 
 @Entity
@@ -17,6 +18,7 @@ public class User {
     @Column(nullable = false, unique = true)
     private String username;
 
+    @JsonIgnore
     @Column(nullable = false)
     private String password;
 

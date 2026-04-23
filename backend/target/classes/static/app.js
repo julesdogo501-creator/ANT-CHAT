@@ -2,6 +2,7 @@ const API_URL = 'https://ant-chat-production.up.railway.app/api';
 let stompClient = null;
 let currentUser = null;
 let currentChatUserId = null; // null => Global, id => Private
+let wsConnected = false;
 
 // DOM
 const authScreen        = document.getElementById('auth-screen');
@@ -23,6 +24,17 @@ const messageHistory = {
     global: [],
     private: {} // { userId: [messages...] }
 };
+const renderedMessageKeys = new Set();
+
+function getMessageKey(message) {
+    if (message && message.id != null) return `id:${message.id}`;
+    const senderId = message?.sender?.id ?? 'na';
+    const receiverId = message?.receiver?.id ?? 'global';
+    const timestamp = message?.timestamp ?? 'no-time';
+    const content = message?.content ?? '';
+    const fileUrl = message?.fileUrl ?? '';
+    return `fallback:${senderId}:${receiverId}:${timestamp}:${content}:${fileUrl}`;
+}
 
 // ─── Auth ──────────────────────────────────────────────────────────────
 document.getElementById('btn-login').addEventListener('click',    (e) => handleAuth(e, 'login'));
@@ -117,13 +129,21 @@ function initFileUpload() {
 
 // ─── WebSocket ─────────────────────────────────────────────────────────
 function connectWebSocket() {
+    if (wsConnected) return;
+    if (stompClient) {
+        try { stompClient.disconnect(); } catch (e) {}
+        stompClient = null;
+    }
     const socket = new SockJS('https://ant-chat-production.up.railway.app/ws');
     stompClient = Stomp.over(socket);
     stompClient.debug = null;
 
     stompClient.connect({}, () => {
+        wsConnected = true;
         stompClient.subscribe('/topic/global', (payload) => {
             const msg = JSON.parse(payload.body);
+            const key = getMessageKey(msg);
+            if (messageHistory.global.some(m => getMessageKey(m) === key)) return;
             messageHistory.global.push(msg);
             if (currentChatUserId === null) displayMessage(msg);
         });
@@ -132,9 +152,13 @@ function connectWebSocket() {
             const msg = JSON.parse(payload.body);
             const peerId = (msg.sender.id == currentUser.id) ? msg.receiver.id : msg.sender.id;
             if (!messageHistory.private[peerId]) messageHistory.private[peerId] = [];
+            const key = getMessageKey(msg);
+            if (messageHistory.private[peerId].some(m => getMessageKey(m) === key)) return;
             messageHistory.private[peerId].push(msg);
             if (currentChatUserId == peerId) displayMessage(msg);
         });
+    }, () => {
+        wsConnected = false;
     });
 }
 
@@ -223,6 +247,10 @@ function sendMessage(content, fileUrl = null, fileType = null) {
 
 // ─── Affichage d'un message ────────────────────────────────────────────
 function displayMessage(message) {
+    const key = getMessageKey(message);
+    if (renderedMessageKeys.has(key)) return;
+    renderedMessageKeys.add(key);
+
     const isMe = (message.sender.id == currentUser.id);
     const msgDiv = document.createElement('div');
     msgDiv.className = `message ${isMe ? 'me' : 'other'}`;
@@ -365,10 +393,12 @@ document.getElementById('btn-logout').addEventListener('click', () => {
         try { stompClient.disconnect(); } catch(e) {}
         stompClient = null;
     }
+    wsConnected = false;
     currentUser = null;
     currentChatUserId = null;
     messageHistory.global = [];
     messageHistory.private = {};
+    renderedMessageKeys.clear();
     allUsers = [];
     annuaireModal.classList.add('hidden');
     chatScreen.classList.add('hidden');

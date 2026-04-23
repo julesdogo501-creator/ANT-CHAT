@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -24,11 +25,21 @@ public class FileController {
         try {
             String fileName = fileStorageService.storeFile(file);
             String fileUrl = "/uploads/" + fileName;
-            return ResponseEntity.ok(Map.of(
-                "url", fileUrl,
-                "type", file.getContentType(),
-                "name", file.getOriginalFilename()
-            ));
+            String fileType = file.getContentType();
+            if (fileType == null || fileType.isBlank()) {
+                fileType = "application/octet-stream";
+            }
+
+            String originalName = file.getOriginalFilename();
+            if (originalName == null || originalName.isBlank()) {
+                originalName = fileName;
+            }
+
+            Map<String, String> response = new HashMap<>();
+            response.put("url", fileUrl);
+            response.put("type", fileType);
+            response.put("name", originalName);
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Upload failed: " + e.getMessage());
         }

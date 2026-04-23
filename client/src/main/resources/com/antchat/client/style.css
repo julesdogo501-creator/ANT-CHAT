@@ -1,349 +1,128 @@
-/* RESET & ROOT */
+/* ANT CHAT - ARTISTIC PREMIUM DESIGN SYSTEM */
+
 .root {
-    -fx-font-family: "Segoe UI", "Roboto", sans-serif;
+    -fx-font-family: 'Segoe UI', 'Roboto', system-ui, sans-serif;
     -fx-background-color: transparent;
 }
 
-/* BACKGROUND BLOBS */
+/* FOND DYNAMIQUE PROFOND */
 .blob-bg {
-    -fx-background-color: radial-gradient(center 50% 50%, radius 80%, #1a0033 0%, #0d0d0d 100%);
+    -fx-background-color: radial-gradient(center 30% 30%, radius 100%, #1e0036 0%, #050508 100%);
     -fx-background-radius: 40;
 }
 
-/* MAIN PANEL - BLACK GLASS */
+/* PANEL GLASSMORPHISM */
 .glass-panel {
-    -fx-background-color: rgba(10, 10, 10, 0.85);
-    -fx-background-radius: 30;
-    -fx-border-color: linear-gradient(to bottom right, rgba(191, 0, 255, 0.4), rgba(10, 10, 10, 0.1), rgba(191, 0, 255, 0.2));
-    -fx-border-radius: 30;
+    -fx-background-color: rgba(10, 10, 15, 0.92);
+    -fx-background-radius: 35;
+    -fx-border-color: linear-gradient(to bottom right, rgba(0, 242, 255, 0.5), rgba(191, 0, 255, 0.5));
+    -fx-border-radius: 35;
     -fx-border-width: 1.5;
-    -fx-effect: dropshadow(three-pass-box, rgba(191, 0, 255, 0.15), 30, 0.5, 0, 0);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 30, 0, 0, 0);
 }
 
-/* AUTH BOX */
-.brand-title-lg {
-    -fx-font-size: 36px;
-    -fx-font-weight: 900;
-    -fx-text-fill: linear-gradient(to right, #bf00ff, #ff00ff);
-}
-
-/* INPUTS GLOW */
-.input-field-glow {
-    -fx-background-color: rgba(20, 20, 20, 0.8);
-    -fx-text-fill: white;
-    -fx-prompt-text-fill: #666;
-    -fx-background-radius: 12;
-    -fx-padding: 12 18;
-    -fx-border-color: rgba(255, 255, 255, 0.05);
-    -fx-border-radius: 12;
-}
-.input-field-glow:focused {
-    -fx-border-color: #bf00ff;
-    -fx-effect: dropshadow(three-pass-box, rgba(191, 0, 255, 0.3), 10, 0, 0, 0);
-}
-
-/* BUTTON NEON */
-.btn-neon {
-    -fx-background-color: #bf00ff;
-    -fx-text-fill: white;
-    -fx-font-weight: bold;
-    -fx-background-radius: 12;
-    -fx-padding: 12 25;
-    -fx-cursor: hand;
-    -fx-effect: dropshadow(three-pass-box, rgba(191, 0, 255, 0.4), 15, 0, 0, 0);
-}
-.btn-neon:hover {
-    -fx-background-color: #d400ff;
-    -fx-effect: dropshadow(three-pass-box, rgba(191, 0, 255, 0.7), 20, 0, 0, 0);
-}
-
-.btn-link {
+/* FIX TRANSPARENCE TOTALE */
+.list-view, .scroll-pane, .list-cell, .viewport, .neon-list {
     -fx-background-color: transparent;
-    -fx-text-fill: #bf00ff;
-    -fx-font-size: 13px;
-    -fx-cursor: hand;
+    -fx-background: transparent;
 }
-.btn-link:hover { -fx-underline: true; }
 
-/* SIDE NAV BAR (FAR LEFT) */
+/* TYPOGRAPHIE SIDEBAR */
+.sidebar-item-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: 800;
+    -fx-text-fill: white;
+}
+.sidebar-item-status {
+    -fx-font-size: 11px;
+    -fx-text-fill: rgba(255, 255, 255, 0.4);
+}
+
+/* BULLES DE CHAT ULTRA-ARTISTIQUES (Moins "fade") */
+.msg-bubble-me {
+    -fx-background-color: linear-gradient(to bottom right, #bf00ff, #7a00cc);
+    -fx-background-radius: 25 25 5 25;
+    -fx-padding: 12 20;
+    -fx-text-fill: white;
+    -fx-effect: dropshadow(gaussian, rgba(191, 0, 255, 0.5), 15, 0, 0, 4);
+    -fx-border-color: rgba(255, 255, 255, 0.2);
+    -fx-border-width: 0.5;
+    -fx-font-size: 14px;
+}
+
+.msg-bubble-other {
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+    -fx-background-radius: 25 25 25 5;
+    -fx-padding: 12 20;
+    -fx-text-fill: #f0f0f0;
+    -fx-border-color: rgba(255, 255, 255, 0.15);
+    -fx-border-width: 0.5;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 10, 0, 0, 2);
+    -fx-font-size: 14px;
+}
+
+/* ANIMATION AU SURVOL DES MESSAGES */
+.msg-bubble-me:hover, .msg-bubble-other:hover {
+    -fx-scale-x: 1.02;
+    -fx-scale-y: 1.02;
+}
+
+/* INPUT AREA DESIGN */
+.chat-input-neon {
+    -fx-background-color: rgba(255, 255, 255, 0.05);
+    -fx-text-fill: white;
+    -fx-prompt-text-fill: #555;
+    -fx-background-radius: 30;
+    -fx-padding: 15 25;
+    -fx-border-color: rgba(0, 242, 255, 0.2);
+    -fx-border-radius: 30;
+}
+.chat-input-neon:focused {
+    -fx-border-color: #00f2ff;
+    -fx-effect: dropshadow(gaussian, rgba(0, 242, 255, 0.4), 15, 0, 0, 0);
+}
+
+/* BOUTON D'ENVOI VIBRANT */
+.btn-send-neon {
+    -fx-background-color: linear-gradient(to right, #00f2ff, #bf00ff);
+    -fx-text-fill: white;
+    -fx-background-radius: 50;
+    -fx-min-width: 55;
+    -fx-min-height: 55;
+    -fx-effect: dropshadow(gaussian, rgba(0, 242, 255, 0.6), 20, 0, 0, 0);
+    -fx-cursor: hand;
+    -fx-font-size: 22px;
+}
+.btn-send-neon:hover {
+    -fx-rotate: 10;
+    -fx-scale-x: 1.1;
+}
+
+/* AVATARS GLOWING */
+.avatar-glow {
+    -fx-stroke: linear-gradient(to bottom right, #00f2ff, #bf00ff);
+    -fx-stroke-width: 3;
+    -fx-effect: dropshadow(gaussian, rgba(0, 242, 255, 0.5), 12, 0, 0, 0);
+}
+
+.avatar-glow-big {
+    -fx-stroke: linear-gradient(to bottom right, #00f2ff, #bf00ff);
+    -fx-stroke-width: 5;
+    -fx-effect: dropshadow(gaussian, rgba(191, 0, 255, 0.7), 25, 0, 0, 0);
+}
+
+/* BARRE DE NAVIGATION */
 .side-nav-bar {
-    -fx-background-color: rgba(5, 5, 5, 0.9);
-    -fx-background-radius: 30 0 0 30;
-    -fx-border-color: transparent rgba(191, 0, 255, 0.1) transparent transparent;
-    -fx-border-width: 0 1 0 0;
+    -fx-background-color: rgba(0, 0, 0, 0.6);
+    -fx-background-radius: 35 0 0 35;
+    -fx-border-color: transparent rgba(255, 255, 255, 0.1) transparent transparent;
 }
 
 .nav-icon {
     -fx-background-color: transparent;
     -fx-text-fill: #555;
-    -fx-font-size: 26px;
-    -fx-cursor: hand;
-    -fx-padding: 10;
-}
-.nav-icon:hover { -fx-text-fill: #bf00ff; }
-.nav-active {
-    -fx-text-fill: #bf00ff;
-}
-
-.nav-icon-sm {
-    -fx-background-color: transparent;
-    -fx-text-fill: #444;
-    -fx-font-size: 18px;
+    -fx-font-size: 28px;
     -fx-cursor: hand;
 }
-.nav-icon-sm:hover { -fx-text-fill: #ff00ff; }
-
-/* SIDEBAR (LIST) */
-.sidebar {
-    -fx-background-color: rgba(10, 10, 10, 0.5);
-    -fx-border-color: transparent rgba(255, 255, 255, 0.05) transparent transparent;
-    -fx-border-width: 0 1 0 0;
-}
-
-.sidebar-header-title {
-    -fx-font-size: 20px;
-    -fx-font-weight: bold;
-    -fx-text-fill: white;
-}
-
-.search-input-neon {
-    -fx-background-color: rgba(30, 30, 30, 0.6);
-    -fx-text-fill: white;
-    -fx-prompt-text-fill: #555;
-    -fx-background-radius: 15;
-    -fx-padding: 8 15;
-    -fx-border-color: transparent;
-}
-.search-input-neon:focused { -fx-border-color: rgba(191, 0, 255, 0.3); -fx-border-radius: 15; }
-
-.neon-list {
-    -fx-background-color: transparent;
-}
-.neon-list .list-cell {
-    -fx-background-color: transparent;
-    -fx-text-fill: #aaa;
-    -fx-padding: 15 20;
-    -fx-border-color: transparent transparent rgba(255,255,255,0.02) transparent;
-}
-.neon-list .list-cell:filled:hover {
-    -fx-background-color: rgba(191, 0, 255, 0.05);
-    -fx-text-fill: white;
-}
-.neon-list .list-cell:filled:selected {
-    -fx-background-color: rgba(191, 0, 255, 0.15);
-    -fx-text-fill: #bf00ff;
-    -fx-font-weight: bold;
-}
-
-/* CHAT AREA */
-.chat-header-modern {
-    -fx-padding: 20;
-    -fx-background-color: rgba(20, 20, 20, 0.4);
-    -fx-border-color: transparent transparent rgba(191, 0, 255, 0.1) transparent;
-    -fx-border-width: 0 0 1 0;
-}
-.chat-title-modern { -fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: white; }
-.chat-subtitle { -fx-font-size: 11px; -fx-text-fill: #bf00ff; -fx-opacity: 0.7; }
-
-.btn-close-modern {
-    -fx-background-color: transparent;
-    -fx-text-fill: #555;
-    -fx-font-size: 16px;
-}
-.btn-close-modern:hover { -fx-text-fill: #ff4444; }
-
-/* MESSAGES */
-.messages-scroll-neon {
-    -fx-background-color: transparent;
-    -fx-border-color: transparent;
-}
-.messages-scroll-neon .viewport {
-    -fx-background-color: transparent;
-}
-.neon-list .list-cell:hover {
-    -fx-background-color: rgba(191, 0, 255, 0.1);
-}
-.neon-list .list-cell:selected {
-    -fx-background-color: rgba(191, 0, 255, 0.2);
-    -fx-border-color: rgba(191, 0, 255, 0.3);
-    -fx-border-width: 0 0 0 4;
-}
-
-.messages-scroll-neon {
-    -fx-background-color: transparent;
-}
-.messages-scroll-neon .viewport { -fx-background-color: transparent; }
-
-.msg-bubble-me {
-    -fx-background-color: rgba(191, 0, 255, 0.2);
-    -fx-padding: 10 18;
-    -fx-background-radius: 20 20 2 20;
-    -fx-border-color: rgba(191, 0, 255, 0.4);
-    -fx-border-width: 0.5;
-    -fx-border-radius: 20 20 2 20;
-    -fx-font-family: "Segoe UI Emoji", "Segoe UI";
-    -fx-font-smoothing-type: gray;
-}
-.msg-bubble-other {
-    -fx-background-color: rgba(255, 255, 255, 0.05);
-    -fx-padding: 10 18;
-    -fx-background-radius: 20 20 20 2;
-    -fx-border-color: rgba(255, 255, 255, 0.1);
-    -fx-border-width: 0.5;
-    -fx-border-radius: 20 20 20 2;
-    -fx-font-family: "Segoe UI Emoji", "Segoe UI";
-    -fx-font-smoothing-type: gray;
-}
-
-/* INPUT AREA NEON */
-.input-area-neon {
-    -fx-padding: 20;
-    -fx-background-color: rgba(15, 15, 15, 0.8);
-    -fx-border-color: rgba(191, 0, 255, 0.1) transparent transparent transparent;
-    -fx-border-width: 1 0 0 0;
-}
-.chat-input-neon {
-    -fx-background-color: rgba(0, 0, 0, 0.5);
-    -fx-text-fill: white;
-    -fx-background-radius: 20;
-    -fx-padding: 10 20;
-    -fx-border-color: rgba(191, 0, 255, 0.2);
-    -fx-border-radius: 20;
-    -fx-font-family: "Segoe UI Emoji", "Segoe UI";
-    -fx-font-smoothing-type: gray;
-}
-.btn-send-neon {
-    -fx-background-color: #bf00ff;
-    -fx-text-fill: white;
-    -fx-font-size: 16px;
-    -fx-background-radius: 50;
-    -fx-padding: 8 15;
-}
-.btn-plus-neon {
-    -fx-background-color: transparent;
-    -fx-text-fill: #bf00ff;
-    -fx-font-size: 22px;
-    -fx-cursor: hand;
-}
-
-/* SCROLLBAR NEON */
-.scroll-bar:vertical {
-    -fx-background-color: transparent;
-    -fx-width: 6;
-}
-.scroll-bar:vertical .thumb {
-    -fx-background-color: rgba(191, 0, 255, 0.3);
-    -fx-background-radius: 3;
-}
-.scroll-bar:vertical .thumb:hover { -fx-background-color: #bf00ff; }
-
-.avatar-glow {
-    -fx-stroke: rgba(255, 255, 255, 0.3);
-    -fx-stroke-width: 1.5;
-}
-
-.avatar-glow-big {
-    -fx-stroke: rgba(191, 0, 255, 0.4);
-    -fx-stroke-width: 2.5;
-}
-
-.field-label {
-    -fx-text-fill: #555;
-    -fx-font-size: 10px;
-    -fx-font-weight: bold;
-    -fx-letter-spacing: 1px;
-}
-
-.empty-placeholder {
-    -fx-background-color: transparent;
-}
-.placeholder-text {
-    -fx-text-fill: #444;
-    -fx-font-size: 14px;
-    -fx-font-style: italic;
-}
-
-.msg-bubble-me, .msg-bubble-other {
-    -fx-padding: 12 20;
-    -fx-max-width: 450;
-}
-.messages-container-neon {
-    -fx-padding: 30;
-    -fx-text-fill: white;
-    -fx-min-width: 400;
-}
-
-.msg-bubble-avatar {
-    -fx-opacity: 0.8;
-    -fx-stroke: rgba(255, 255, 255, 0.1);
-    -fx-stroke-width: 1;
-}
-.msg-bubble-avatar:hover { -fx-opacity: 1.0; }
-
-/* EMOJI PICKER POPUP */
-.emoji-picker-pane {
-    -fx-background-color: rgba(15, 15, 15, 0.95);
-    -fx-background-radius: 15;
-    -fx-border-color: #bf00ff;
-    -fx-border-width: 1;
-    -fx-border-radius: 15;
-    -fx-effect: dropshadow(three-pass-box, rgba(191, 0, 255, 0.4), 20, 0, 0, 0);
-}
-
-.btn-emoji-item {
-    -fx-background-color: transparent;
-    -fx-font-size: 20px;
-    -fx-cursor: hand;
-    -fx-padding: 5;
-    -fx-background-radius: 8;
-    -fx-font-family: "Segoe UI Emoji", "Segoe UI";
-    -fx-font-smoothing-type: gray;
-}
-
-.btn-emoji-item:hover {
-    -fx-background-color: rgba(191, 0, 255, 0.2);
-}
-
-/* ADVANCED EMOJI PICKER */
-.emoji-picker-container {
-    -fx-background-color: rgba(15, 15, 15, 0.95);
-    -fx-background-radius: 15;
-    -fx-border-color: rgba(191, 0, 255, 0.4);
-    -fx-border-width: 1.5;
-    -fx-border-radius: 15;
-    -fx-effect: dropshadow(three-pass-box, rgba(191, 0, 255, 0.5), 30, 0, 0, 0);
-}
-
-.emoji-category-bar {
-    -fx-background-color: rgba(0, 0, 0, 0.3);
-    -fx-background-radius: 15 15 0 0;
-    -fx-padding: 10;
-    -fx-border-color: transparent transparent rgba(191, 0, 255, 0.1) transparent;
-}
-
-.btn-emoji-category {
-    -fx-background-color: transparent;
-    -fx-text-fill: #888;
-    -fx-font-size: 16px;
-    -fx-cursor: hand;
-    -fx-padding: 5 10;
-    -fx-font-family: "Segoe UI Emoji", "Segoe UI";
-    -fx-font-smoothing-type: gray;
-}
-.btn-emoji-category:hover { -fx-text-fill: #bf00ff; }
-.btn-emoji-category-active { -fx-text-fill: #bf00ff; -fx-font-weight: bold; }
-
-.emoji-search-field {
-    -fx-background-color: rgba(40, 40, 40, 0.6);
-    -fx-text-fill: white;
-    -fx-prompt-text-fill: #555;
-    -fx-background-radius: 8;
-    -fx-padding: 8 12;
-    -fx-border-color: transparent;
-}
-.emoji-search-field:focused { -fx-border-color: #bf00ff; }
-
-.emoji-grid-scroll {
-    -fx-background-color: transparent;
-}
-.emoji-grid-scroll .viewport { -fx-background-color: transparent; }
+.nav-icon:hover { -fx-text-fill: #00f2ff; -fx-scale-x: 1.1; }
+.nav-active { -fx-text-fill: #bf00ff; -fx-effect: dropshadow(gaussian, #bf00ff, 20, 0, 0, 0); }

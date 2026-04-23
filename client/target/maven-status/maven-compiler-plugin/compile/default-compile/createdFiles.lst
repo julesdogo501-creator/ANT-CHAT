@@ -1,4 +1,4 @@
-com\antchat\client\service\WebSocketService$1$1.class
+com\antchat\client\service\WebSocketService$PendingGroupSubscription.class
 com\antchat\client\ClientApplication.class
 com\antchat\client\MainController$2.class
 com\antchat\client\service\WebSocketService.class
@@ -8,6 +8,7 @@ com\antchat\client\MainController$3.class
 com\antchat\client\service\WebSocketService$1.class
 com\antchat\client\model\ChatGroup.class
 com\antchat\client\model\ChatItem.class
+com\antchat\client\MainController$6.class
 com\antchat\client\model\User.class
 com\antchat\client\service\WebSocketService$2.class
 com\antchat\client\MainController$4.class

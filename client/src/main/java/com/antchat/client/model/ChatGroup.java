@@ -1,8 +1,10 @@
 package com.antchat.client.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.HashSet;
 import java.util.Set;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ChatGroup {
     private Long id;
     private String name;

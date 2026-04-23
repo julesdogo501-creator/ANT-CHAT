@@ -3,6 +3,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.Circle?>
 
 <StackPane stylesheets="@style.css" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.antchat.client.MainController">
     <!-- Fond transparent avec design Blob simulé par CSS -->
@@ -22,8 +23,8 @@
             </VBox>
             
             <VBox spacing="10" alignment="CENTER" maxWidth="300">
-                <Button text="Se Connecter" onAction="#onLogin" styleClass="btn, btn-neon" maxWidth="Infinity" />
-                <Button text="Créer un compte" onAction="#onRegister" styleClass="btn, btn-link" />
+                <Button text="Se Connecter" onAction="#onLogin" styleClass="btn-neon" maxWidth="Infinity" />
+                <Button text="Créer un compte" onAction="#onRegister" styleClass="btn-link" />
             </VBox>
             
             <Label fx:id="authMessage" styleClass="error-msg" />
@@ -47,9 +48,6 @@
                 
                 <Region VBox.vgrow="ALWAYS" />
                 
-                <Button text="📞" styleClass="nav-icon-sm" onAction="#onTabAppels" />
-                <Button text="📣" styleClass="nav-icon-sm" onAction="#onTabActus" />
-                <Button text="🛠" styleClass="nav-icon-sm" onAction="#onTabOutils" />
                 <Button text="⚙️" styleClass="nav-icon-sm" onAction="#onOpenSettings" />
             </VBox>
 
@@ -100,6 +98,7 @@
                 <HBox spacing="10" styleClass="input-area-neon" visible="false" fx:id="messageInputArea" alignment="CENTER">
                     <Button text="+" onAction="#onAttachMedia" styleClass="btn-plus-neon" />
                     <Button text="😊" onAction="#onOpenEmojiPicker" styleClass="btn-plus-neon" />
+
                     <TextField fx:id="messageField" promptText="Écrivez votre message..." HBox.hgrow="ALWAYS" styleClass="chat-input-neon" onAction="#onSendMessage" />
                     <Button text="✦" onAction="#onSendMessage" styleClass="btn-send-neon" />
                 </HBox>
@@ -112,7 +111,7 @@
             
             <VBox alignment="CENTER" spacing="10">
                 <javafx.scene.shape.Circle fx:id="settingsAvatarPreview" radius="50" styleClass="avatar-glow-big" />
-                <Button text="Changer la photo" onAction="#onPickAvatarFile" styleClass="btn, btn-link" />
+                <Button text="Changer la photo" onAction="#onPickAvatarFile" styleClass="btn-link" />
             </VBox>
             
             <VBox spacing="15" maxWidth="300">
@@ -124,8 +123,8 @@
             </VBox>
             
             <HBox spacing="15" alignment="CENTER" maxWidth="300">
-                <Button text="Annuler" onAction="#onCloseSettings" styleClass="btn, btn-link" />
-                <Button text="Enregistrer" onAction="#onSaveSettings" styleClass="btn, btn-neon" HBox.hgrow="ALWAYS" maxWidth="Infinity" />
+                <Button text="Annuler" onAction="#onCloseSettings" styleClass="btn-link" />
+                <Button text="Enregistrer" onAction="#onSaveSettings" styleClass="btn-neon" HBox.hgrow="ALWAYS" maxWidth="Infinity" />
             </HBox>
         </VBox>
         
