@@ -8,8 +8,11 @@ import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.messaging.WebSocketStompClient;
 
 import java.lang.reflect.Type;
+import java.util.Set;
 import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 public class WebSocketService {
@@ -52,6 +55,12 @@ public class WebSocketService {
     private final CopyOnWriteArrayList<PendingGroupSubscription> activeGroupSubs =
             new CopyOnWriteArrayList<>();
 
+    /** Évite plusieurs tentatives de connexion STOMP en parallèle (doublons de messages). */
+    private final AtomicBoolean connectionAttemptInFlight = new AtomicBoolean(false);
+
+    /** Groupes déjà souscrits sur la session STOMP courante (évite les souscriptions multiples). */
+    private final Set<Long> subscribedGroupIdsThisSession = ConcurrentHashMap.newKeySet();
+
     private record PendingGroupSubscription(Long groupId, Consumer<Message> handler) {}
 
     // ─── API publique ────────────────────────────────────────────────────────
@@ -76,6 +85,8 @@ public class WebSocketService {
      */
     public void disconnect() {
         intentionalDisconnect = true;
+        connectionAttemptInFlight.set(false);
+        subscribedGroupIdsThisSession.clear();
         scheduler.shutdownNow();
         if (stompSession != null && stompSession.isConnected()) {
             try { stompSession.disconnect(); } catch (Exception ignored) {}
@@ -126,56 +137,77 @@ public class WebSocketService {
 
     private void doConnect() {
         if (intentionalDisconnect) return;
+        if (!connectionAttemptInFlight.compareAndSet(false, true)) {
+            System.out.println("⏭️ Connexion WebSocket ignorée (tentative déjà en cours).");
+            return;
+        }
 
-        StandardWebSocketClient wsClient = new StandardWebSocketClient();
-        WebSocketStompClient stompClient = new WebSocketStompClient(wsClient);
-        stompClient.setMessageConverter(new MappingJackson2MessageConverter());
-        stompClient.setInboundMessageSizeLimit(10 * 1024 * 1024); // 10 MB
+        try {
+            StandardWebSocketClient wsClient = new StandardWebSocketClient();
+            WebSocketStompClient stompClient = new WebSocketStompClient(wsClient);
+            stompClient.setMessageConverter(new MappingJackson2MessageConverter());
+            stompClient.setInboundMessageSizeLimit(10 * 1024 * 1024); // 10 MB
 
-        System.out.println("📡 Connexion WebSocket → " + url
-                + (currentDelayMs == INITIAL_DELAY_MS ? "" : " (retry backoff=" + currentDelayMs / 1000 + "s)"));
+            System.out.println("📡 Connexion WebSocket → " + url
+                    + (currentDelayMs == INITIAL_DELAY_MS ? "" : " (retry backoff=" + currentDelayMs / 1000 + "s)"));
 
-        stompClient.connect(url, new StompSessionHandlerAdapter() {
+            stompClient.connect(url, new StompSessionHandlerAdapter() {
 
-            @Override
-            public void afterConnected(StompSession session, StompHeaders headers) {
-                stompSession   = session;
-                currentDelayMs = INITIAL_DELAY_MS; // reset backoff après succès
-                System.out.println("✅ WebSocket CONNECTÉ (session=" + session.getSessionId()
-                        + (isReconnecting ? " [RECONNEXION]" : "") + ")");
+                @Override
+                public void afterConnected(StompSession session, StompHeaders headers) {
+                    connectionAttemptInFlight.set(false);
+                    stompSession   = session;
+                    currentDelayMs = INITIAL_DELAY_MS; // reset backoff après succès
+                    subscribedGroupIdsThisSession.clear();
+                    System.out.println("✅ WebSocket CONNECTÉ (session=" + session.getSessionId()
+                            + (isReconnecting ? " [RECONNEXION]" : "") + ")");
 
-                // Souscription canal privé
-                session.subscribe("/topic/private/" + savedUserId, frameHandler(savedOnPrivate));
+                    // Souscription canal privé
+                    session.subscribe("/topic/private/" + savedUserId, frameHandler(savedOnPrivate));
 
-                if (isReconnecting) {
-                    // Reconnexion : rejouer les souscriptions groupes actives mémorisées
-                    for (PendingGroupSubscription s : activeGroupSubs) {
-                        System.out.println("🔁 Replay souscription groupe ID=" + s.groupId());
-                        session.subscribe("/topic/group/" + s.groupId(), frameHandler(s.handler()));
+                    if (isReconnecting) {
+                        // Reconnexion : rejouer les souscriptions groupes actives mémorisées
+                        for (PendingGroupSubscription s : activeGroupSubs) {
+                            Long gid = s.groupId();
+                            if (!subscribedGroupIdsThisSession.add(gid)) {
+                                continue;
+                            }
+                            System.out.println("🔁 Replay souscription groupe ID=" + gid);
+                            session.subscribe("/topic/group/" + gid, frameHandler(s.handler()));
+                        }
+                    } else {
+                        // Première connexion : traiter la file d'attente pendante
+                        for (PendingGroupSubscription s : pendingGroupSubs) {
+                            doSubscribeToGroup(session, s);
+                        }
+                        pendingGroupSubs.clear();
                     }
-                } else {
-                    // Première connexion : traiter la file d'attente pendante
-                    for (PendingGroupSubscription s : pendingGroupSubs) {
-                        doSubscribeToGroup(session, s);
-                    }
-                    pendingGroupSubs.clear();
                 }
-            }
 
-            @Override
-            public void handleException(StompSession session, StompCommand cmd,
-                                        StompHeaders headers, byte[] payload, Throwable ex) {
-                System.err.println("❌ Erreur STOMP : " + ex.getMessage());
-            }
+                @Override
+                public void handleException(StompSession session, StompCommand cmd,
+                                            StompHeaders headers, byte[] payload, Throwable ex) {
+                    connectionAttemptInFlight.set(false);
+                    System.err.println("❌ Erreur STOMP : " + ex.getMessage());
+                }
 
-            @Override
-            public void handleTransportError(StompSession session, Throwable ex) {
-                System.err.println("❌ Transport WebSocket fermé : " + ex.getMessage());
-                stompSession    = null;
-                isReconnecting  = true; // les prochaines tentatives sont des reconnexions
+                @Override
+                public void handleTransportError(StompSession session, Throwable ex) {
+                    connectionAttemptInFlight.set(false);
+                    System.err.println("❌ Transport WebSocket fermé : " + ex.getMessage());
+                    stompSession    = null;
+                    isReconnecting  = true; // les prochaines tentatives sont des reconnexions
+                    scheduleReconnect();
+                }
+            });
+        } catch (Exception e) {
+            connectionAttemptInFlight.set(false);
+            System.err.println("❌ Échec démarrage WebSocket : " + e.getMessage());
+            if (!intentionalDisconnect) {
+                isReconnecting = true;
                 scheduleReconnect();
             }
-        });
+        }
     }
 
     private void scheduleReconnect() {
@@ -190,10 +222,14 @@ public class WebSocketService {
     }
 
     private void doSubscribeToGroup(StompSession session, PendingGroupSubscription sub) {
-        System.out.println("📡 Souscription groupe ID=" + sub.groupId());
-        session.subscribe("/topic/group/" + sub.groupId(), frameHandler(sub.handler()));
+        Long gid = sub.groupId();
+        if (!subscribedGroupIdsThisSession.add(gid)) {
+            return;
+        }
+        System.out.println("📡 Souscription groupe ID=" + gid);
+        session.subscribe("/topic/group/" + gid, frameHandler(sub.handler()));
         // Mémoriser pour rejouer après une reconnexion
-        if (activeGroupSubs.stream().noneMatch(s -> s.groupId().equals(sub.groupId()))) {
+        if (activeGroupSubs.stream().noneMatch(s -> s.groupId().equals(gid))) {
             activeGroupSubs.add(sub);
         }
     }

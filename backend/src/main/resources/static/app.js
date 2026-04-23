@@ -3,6 +3,9 @@ let stompClient = null;
 let currentUser = null;
 let currentChatUserId = null; // null => Global, id => Private
 let wsConnected = false;
+let wsConnecting = false;
+let fileUploadHandlersBound = false;
+let emojiPickerInitialized = false;
 
 // DOM
 const authScreen        = document.getElementById('auth-screen');
@@ -94,6 +97,8 @@ function initChat() {
 }
 
 function initEmojiPicker() {
+    if (emojiPickerInitialized) return;
+    emojiPickerInitialized = true;
     const { createPicker } = window.picmo;
     const pickerContainer = document.createElement('div');
     pickerContainer.className = 'emoji-picker-container hidden';
@@ -116,10 +121,14 @@ function initEmojiPicker() {
 }
 
 function initFileUpload() {
+    if (fileUploadHandlersBound) return;
+    fileUploadHandlersBound = true;
+    let uploadBusy = false;
     btnFile.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', async () => {
         const file = fileInput.files[0];
-        if (!file) return;
+        if (!file || uploadBusy) return;
+        uploadBusy = true;
 
         const formData = new FormData();
         formData.append('file', file);
@@ -138,14 +147,18 @@ function initFileUpload() {
         } catch (e) {
             console.error('Upload error:', e);
             alert('Erreur lors de l\'envoi du fichier : ' + (e.message || e));
+        } finally {
+            uploadBusy = false;
+            fileInput.value = '';
         }
-        fileInput.value = '';
     });
 }
 
 // ─── WebSocket ─────────────────────────────────────────────────────────
 function connectWebSocket() {
     if (wsConnected) return;
+    if (wsConnecting) return;
+    wsConnecting = true;
     if (stompClient) {
         try { stompClient.disconnect(); } catch (e) {}
         stompClient = null;
@@ -156,6 +169,7 @@ function connectWebSocket() {
 
     stompClient.connect({}, () => {
         wsConnected = true;
+        wsConnecting = false;
         stompClient.subscribe('/topic/global', (payload) => {
             const msg = JSON.parse(payload.body);
             const key = getMessageKey(msg);
@@ -175,6 +189,7 @@ function connectWebSocket() {
         });
     }, () => {
         wsConnected = false;
+        wsConnecting = false;
     });
 }
 
@@ -411,6 +426,7 @@ document.getElementById('btn-logout').addEventListener('click', () => {
         stompClient = null;
     }
     wsConnected = false;
+    wsConnecting = false;
     currentUser = null;
     currentChatUserId = null;
     messageHistory.global = [];
