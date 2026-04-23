@@ -893,26 +893,12 @@ public class MainController {
             });
             
             new Thread(() -> {
-                try { 
-                    String mime = java.nio.file.Files.probeContentType(file.toPath());
-                    if (mime != null && mime.startsWith("image/")) {
-                        // IMAGE -> Compression et Base64 pour persistance Railway
-                        String b64 = compressAndEncodeImage(file);
-                        if (b64 != null) {
-                            Platform.runLater(() -> {
-                                pendingFileUrl = b64;
-                                pendingFileType = "image/png"; // On convertit tout en png pour la compression
-                                onSendMessage();
-                            });
-                        } else {
-                            uploadAndSend(file);
-                        }
-                    } else {
-                        // AUTRE FICHIER -> UPLOAD CLASSIQUE
-                        uploadAndSend(file); 
-                    }
-                } catch (Throwable e) { 
-                    e.printStackTrace(); 
+                try {
+                    // Toujours passer par l'upload HTTP : évite les messages STOMP énormes (base64)
+                    // qui échouent souvent ou dépassent les limites proxy / WebSocket.
+                    uploadAndSend(file);
+                } catch (Throwable e) {
+                    e.printStackTrace();
                     Platform.runLater(() -> {
                         messageField.setDisable(false);
                         messageField.setPromptText("Échec de l'envoi");
@@ -955,16 +941,27 @@ public class MainController {
             .build();
         HttpResponse<String> res = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
         if (res.statusCode() == 200) {
-            Map<String, String> m = mapper.readValue(res.body(), new TypeReference<Map<String, String>>() {});
-            return m.get("url") + "::" + m.get("type"); // Hack simple pour retourner 2 valeurs
+            try {
+                Map<String, String> m = mapper.readValue(res.body(), new TypeReference<Map<String, String>>() {});
+                String url = m.get("url");
+                if (url == null || url.isBlank()) {
+                    System.err.println("Upload: réponse JSON sans 'url' : " + res.body());
+                    return null;
+                }
+                return url + "::" + (m.get("type") != null ? m.get("type") : "");
+            } catch (Exception parseEx) {
+                System.err.println("Upload: JSON invalide (" + res.statusCode() + "): " + res.body());
+                return null;
+            }
         }
+        System.err.println("Upload échoué HTTP " + res.statusCode() + " : " + res.body());
         return null;
     }
 
     private void uploadAndSend(java.io.File file) throws Exception {
         String result = uploadFileSync(file);
         if (result != null) {
-            String[] parts = result.split("::");
+            String[] parts = result.split("::", 2);
             final String url  = parts[0];
             final String type = parts.length > 1 ? parts[1] : "";
             // Envoi immédiat sans passer par le champ texte
@@ -973,6 +970,9 @@ public class MainController {
                 pendingFileType = type;
                 onSendMessage();
             });
+        } else {
+            Platform.runLater(() ->
+                messageField.setPromptText("Échec upload : vérifiez le serveur ou la taille du fichier."));
         }
     }
 

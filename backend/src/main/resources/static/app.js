@@ -26,6 +26,18 @@ const messageHistory = {
 };
 const renderedMessageKeys = new Set();
 
+function looksLikeImageUrl(url) {
+    if (!url) return false;
+    const path = String(url).split('?')[0].toLowerCase();
+    return /\.(png|jpe?g|gif|webp|bmp|svg|heic|avif)$/.test(path);
+}
+
+function isImageAttachment(fileUrl, fileType) {
+    const t = (fileType || '').toLowerCase();
+    if (t.startsWith('image/')) return true;
+    return looksLikeImageUrl(fileUrl);
+}
+
 function getMessageKey(message) {
     if (message && message.id != null) return `id:${message.id}`;
     const senderId = message?.sender?.id ?? 'na';
@@ -117,11 +129,15 @@ function initFileUpload() {
                 method: 'POST',
                 body: formData
             });
-            const data = await res.json();
+            const raw = await res.text();
+            if (!res.ok) {
+                throw new Error(raw || res.statusText);
+            }
+            const data = JSON.parse(raw);
             sendMessage(null, data.url, data.type);
         } catch (e) {
             console.error('Upload error:', e);
-            alert('Erreur lors de l\'envoi du fichier');
+            alert('Erreur lors de l\'envoi du fichier : ' + (e.message || e));
         }
         fileInput.value = '';
     });
@@ -195,6 +211,7 @@ async function loadContacts() {
 
 // ─── Ouvrir une conversation ───────────────────────────────────────────
 async function openChat(peerId, name, listItem) {
+    renderedMessageKeys.clear();
     currentChatUserId = peerId;
     currentChatNameEl.textContent = name;
     messageForm.classList.remove('hidden');
@@ -260,7 +277,7 @@ function displayMessage(message) {
     
     if (message.fileUrl) {
         const fullUrl = message.fileUrl.startsWith('http') ? message.fileUrl : `https://ant-chat-production.up.railway.app${message.fileUrl}`;
-        if (message.fileType && message.fileType.startsWith('image/')) {
+        if (isImageAttachment(message.fileUrl, message.fileType)) {
             contentHtml = `<div class="msg-bubble">
                 <img src="${fullUrl}" class="msg-img" onclick="window.open('${fullUrl}')">
                 ${message.content && message.content !== '[Fichier]' ? `<p>${message.content}</p>` : ''}
