@@ -3,7 +3,7 @@ package com.antchat.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDateTime;
 
 @Entity
@@ -18,7 +18,8 @@ public class User {
     @Column(nullable = false, unique = true)
     private String username;
 
-    @JsonIgnore
+    /** Accepté en entrée (login/register) ; jamais renvoyé dans les réponses JSON. */
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Column(nullable = false)
     private String password;
 
