@@ -5,7 +5,7 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.shape.Circle?>
 
-<StackPane stylesheets="@style.css" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.antchat.client.MainController">
+<StackPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.antchat.client.MainController">
     <!-- Fond transparent avec design Blob simulé par CSS -->
     <Region styleClass="blob-bg" />
 
@@ -70,17 +70,22 @@
 
             <!-- Chat Area -->
             <VBox HBox.hgrow="ALWAYS" styleClass="chat-area">
-                <HBox alignment="CENTER_LEFT" styleClass="chat-header-modern" spacing="15">
-                    <javafx.scene.shape.Circle fx:id="chatHeaderAvatar" radius="18" />
-                    <VBox alignment="CENTER_LEFT">
+                <VBox styleClass="chat-header-modern" spacing="10">
+                    <HBox alignment="CENTER_RIGHT" spacing="8">
+                        <padding>
+                            <Insets top="6" right="8" left="8" />
+                        </padding>
+                        <Region HBox.hgrow="ALWAYS" />
+                        <Button fx:id="btnAddMember" text="+" onAction="#onAddMember" styleClass="btn-plus-neon" visible="false" />
+                        <Button text="—" styleClass="btn-minimize" onAction="#onClose" />
+                        <Button text="✕" onAction="#onClose" styleClass="btn-close-modern" />
+                    </HBox>
+                    <VBox alignment="CENTER" spacing="8" styleClass="chat-header-center-block">
+                        <javafx.scene.shape.Circle fx:id="chatHeaderAvatar" radius="22" styleClass="chat-header-avatar" />
                         <Label fx:id="currentChatName" text="ANT CHAT" styleClass="chat-title-modern" />
                         <Label text="Discussion sécurisée" styleClass="chat-subtitle" />
                     </VBox>
-                    <Region HBox.hgrow="ALWAYS" />
-                    <Button fx:id="btnAddMember" text="+" onAction="#onAddMember" styleClass="btn-plus-neon" visible="false" />
-                    <Button text="—" styleClass="btn-minimize" onAction="#onClose" />
-                    <Button text="✕" onAction="#onClose" styleClass="btn-close-modern" />
-                </HBox>
+                </VBox>
 
                 <StackPane VBox.vgrow="ALWAYS">
                     <!-- Zone de messages -->

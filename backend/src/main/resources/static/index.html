@@ -57,7 +57,12 @@
             </div>
             
             <div class="rooms-section">
-                <h3>Discussions</h3>
+                <div class="rooms-header">
+                    <h3>Discussions</h3>
+                    <button id="btn-create-group" class="btn-icon-sm" title="Créer un groupe">
+                        <i class="ph-fill ph-plus"></i>
+                    </button>
+                </div>
                 <ul id="contact-list">
                     <!-- Dynamic contacts -->
                 </ul>
@@ -121,6 +126,43 @@
             <ul id="annuaire-list" class="annuaire-list">
                 <!-- Dynamic list -->
             </ul>
+        </div>
+    </div>
+
+    <!-- Create Group Modal -->
+    <div id="create-group-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <div class="modal-header">
+                <h3>Créer un groupe</h3>
+                <button id="btn-close-create-group" class="btn-icon-sm">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+            <form id="create-group-form">
+                <input type="text" id="group-name" placeholder="Nom du groupe" required>
+                <button type="submit" class="btn primary">Créer</button>
+            </form>
+            <p id="create-group-msg"></p>
+        </div>
+    </div>
+
+    <!-- Add Members Modal -->
+    <div id="add-members-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <div class="modal-header">
+                <h3>Ajouter des membres</h3>
+                <button id="btn-close-add-members" class="btn-icon-sm">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+            <div class="members-search">
+                <i class="ph ph-magnifying-glass"></i>
+                <input type="text" id="members-search-input" placeholder="Rechercher un utilisateur...">
+            </div>
+            <ul id="members-list" class="members-list">
+                <!-- Dynamic list -->
+            </ul>
+            <p id="add-members-msg"></p>
         </div>
     </div>
 

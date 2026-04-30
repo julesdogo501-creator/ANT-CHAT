@@ -3,22 +3,26 @@
 .root {
     -fx-font-family: 'Segoe UI', 'Roboto', system-ui, sans-serif;
     -fx-background-color: transparent;
+    /* Réduit le bleu système Modena (focus / accent) */
+    -fx-accent: #a855f7;
+    -fx-focus-color: rgba(168, 85, 247, 0.55);
+    -fx-faint-focus-color: rgba(168, 85, 247, 0.2);
 }
 
 /* FOND DYNAMIQUE PROFOND */
 .blob-bg {
-    -fx-background-color: radial-gradient(center 30% 30%, radius 100%, #1e0036 0%, #050508 100%);
+    -fx-background-color: radial-gradient(center 28% 28%, radius 95%, #2e1065 0%, #1a0528 45%, #050508 100%);
     -fx-background-radius: 40;
 }
 
-/* PANEL GLASSMORPHISM */
+/* PANEL GLASSMORPHISM — cadre violet fluo */
 .glass-panel {
-    -fx-background-color: rgba(10, 10, 15, 0.92);
+    -fx-background-color: rgba(10, 8, 18, 0.93);
     -fx-background-radius: 35;
-    -fx-border-color: linear-gradient(to bottom right, rgba(0, 242, 255, 0.5), rgba(191, 0, 255, 0.5));
+    -fx-border-color: linear-gradient(to bottom right, rgba(232, 121, 249, 0.65), rgba(147, 51, 234, 0.55), rgba(192, 38, 252, 0.45));
     -fx-border-radius: 35;
     -fx-border-width: 1.5;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 30, 0, 0, 0);
+    -fx-effect: dropshadow(gaussian, rgba(124, 58, 237, 0.35), 28, 0.2, 0, 0);
 }
 
 /* FIX TRANSPARENCE TOTALE */
@@ -38,58 +42,100 @@
     -fx-text-fill: rgba(255, 255, 255, 0.4);
 }
 
-/* BULLES DE CHAT ULTRA-ARTISTIQUES (Moins "fade") */
+/* Bulles : envoyés (moi) = bleu | reçus (autre) = violet fluo (thème) */
 .msg-bubble-me {
-    -fx-background-color: linear-gradient(to bottom right, #bf00ff, #7a00cc);
-    -fx-background-radius: 25 25 5 25;
+    -fx-background-color: linear-gradient(to bottom right, #7dd3fc, #38bdf8 40%, #0ea5e9 75%, #2563eb);
+    -fx-background-radius: 22 22 6 22;
     -fx-padding: 12 20;
-    -fx-text-fill: white;
-    -fx-effect: dropshadow(gaussian, rgba(191, 0, 255, 0.5), 15, 0, 0, 4);
-    -fx-border-color: rgba(255, 255, 255, 0.2);
-    -fx-border-width: 0.5;
+    -fx-text-fill: #f0f9ff;
+    -fx-effect: dropshadow(gaussian, rgba(56, 189, 248, 0.55), 18, 0.3, 0, 3);
+    -fx-border-color: rgba(186, 230, 253, 0.5);
+    -fx-border-width: 1;
     -fx-font-size: 14px;
 }
 
 .msg-bubble-other {
-    -fx-background-color: rgba(255, 255, 255, 0.1);
-    -fx-background-radius: 25 25 25 5;
+    -fx-background-color: linear-gradient(to bottom right, #f0abfc, #d946ef 35%, #a855f7 70%, #7c3aed);
+    -fx-background-radius: 22 22 22 6;
     -fx-padding: 12 20;
-    -fx-text-fill: #f0f0f0;
-    -fx-border-color: rgba(255, 255, 255, 0.15);
-    -fx-border-width: 0.5;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 10, 0, 0, 2);
+    -fx-text-fill: #faf5ff;
+    -fx-effect: dropshadow(gaussian, rgba(192, 38, 252, 0.65), 20, 0.35, 0, 2);
+    -fx-border-color: rgba(233, 213, 255, 0.45);
+    -fx-border-width: 1;
     -fx-font-size: 14px;
 }
 
-/* ANIMATION AU SURVOL DES MESSAGES */
-.msg-bubble-me:hover, .msg-bubble-other:hover {
+.msg-bubble-me:hover,
+.msg-bubble-other:hover {
     -fx-scale-x: 1.02;
     -fx-scale-y: 1.02;
 }
 
-/* INPUT AREA DESIGN */
+/* En-tête de discussion : titre centré, violet fluo */
+.chat-header-modern {
+    -fx-background-color: rgba(0, 0, 0, 0.42);
+    -fx-border-color: transparent transparent rgba(168, 85, 247, 0.25) transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.chat-header-center-block {
+    -fx-padding: 0 16 14 16;
+}
+
+.chat-header-avatar {
+    -fx-fill: linear-gradient(to bottom right, #f0abfc, #a855f7 60%, #7c3aed);
+    -fx-stroke: rgba(232, 121, 249, 0.85);
+    -fx-stroke-width: 2;
+    -fx-effect: dropshadow(gaussian, rgba(192, 38, 252, 0.65), 14, 0.3, 0, 0);
+}
+
+.chat-title-modern {
+    -fx-font-size: 28px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f0abfc;
+    -fx-alignment: center;
+    -fx-text-alignment: center;
+    -fx-effect: dropshadow(gaussian, rgba(192, 38, 252, 0.95), 20, 0.4, 0, 0);
+}
+
+.chat-subtitle {
+    -fx-font-size: 12px;
+    -fx-text-fill: #a89bb8;
+    -fx-alignment: center;
+    -fx-text-alignment: center;
+}
+
+/* Profil / paramètres : même typo titre que la marque */
+.settings-box .brand-title-lg {
+    -fx-font-size: 26px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #e9d5ff;
+    -fx-effect: dropshadow(gaussian, rgba(168, 85, 247, 0.55), 14, 0.3, 0, 0);
+}
+
+/* INPUT — contour violet fluo */
 .chat-input-neon {
     -fx-background-color: rgba(255, 255, 255, 0.05);
     -fx-text-fill: white;
-    -fx-prompt-text-fill: #555;
+    -fx-prompt-text-fill: #7c6a92;
     -fx-background-radius: 30;
     -fx-padding: 15 25;
-    -fx-border-color: rgba(0, 242, 255, 0.2);
+    -fx-border-color: rgba(168, 85, 247, 0.35);
     -fx-border-radius: 30;
 }
 .chat-input-neon:focused {
-    -fx-border-color: #00f2ff;
-    -fx-effect: dropshadow(gaussian, rgba(0, 242, 255, 0.4), 15, 0, 0, 0);
+    -fx-border-color: #e879f9;
+    -fx-effect: dropshadow(gaussian, rgba(192, 38, 252, 0.45), 16, 0.25, 0, 0);
 }
 
-/* BOUTON D'ENVOI VIBRANT */
+/* BOUTON D'ENVOI — bleu → violet (cohérent avec bulles) */
 .btn-send-neon {
-    -fx-background-color: linear-gradient(to right, #00f2ff, #bf00ff);
+    -fx-background-color: linear-gradient(to right, #38bdf8, #a855f7, #c026fc);
     -fx-text-fill: white;
     -fx-background-radius: 50;
     -fx-min-width: 55;
     -fx-min-height: 55;
-    -fx-effect: dropshadow(gaussian, rgba(0, 242, 255, 0.6), 20, 0, 0, 0);
+    -fx-effect: dropshadow(gaussian, rgba(192, 38, 252, 0.55), 22, 0.3, 0, 0);
     -fx-cursor: hand;
     -fx-font-size: 22px;
 }
@@ -98,17 +144,17 @@
     -fx-scale-x: 1.1;
 }
 
-/* AVATARS GLOWING */
+/* AVATARS — halo violet fluo */
 .avatar-glow {
-    -fx-stroke: linear-gradient(to bottom right, #00f2ff, #bf00ff);
+    -fx-stroke: linear-gradient(to bottom right, #e879f9, #a855f7 50%, #7c3aed);
     -fx-stroke-width: 3;
-    -fx-effect: dropshadow(gaussian, rgba(0, 242, 255, 0.5), 12, 0, 0, 0);
+    -fx-effect: dropshadow(gaussian, rgba(192, 38, 252, 0.55), 14, 0.25, 0, 0);
 }
 
 .avatar-glow-big {
-    -fx-stroke: linear-gradient(to bottom right, #00f2ff, #bf00ff);
+    -fx-stroke: linear-gradient(to bottom right, #f0abfc, #9333ea 55%, #6d28d9);
     -fx-stroke-width: 5;
-    -fx-effect: dropshadow(gaussian, rgba(191, 0, 255, 0.7), 25, 0, 0, 0);
+    -fx-effect: dropshadow(gaussian, rgba(192, 38, 252, 0.7), 24, 0.3, 0, 0);
 }
 
 /* BARRE DE NAVIGATION */
@@ -124,5 +170,193 @@
     -fx-font-size: 28px;
     -fx-cursor: hand;
 }
-.nav-icon:hover { -fx-text-fill: #00f2ff; -fx-scale-x: 1.1; }
+.nav-icon:hover { -fx-text-fill: #e879f9; -fx-scale-x: 1.1; }
 .nav-active { -fx-text-fill: #bf00ff; -fx-effect: dropshadow(gaussian, #bf00ff, 20, 0, 0, 0); }
+
+.nav-icon-sm {
+    -fx-background-color: transparent;
+    -fx-text-fill: #6b5a7a;
+    -fx-font-size: 22px;
+    -fx-cursor: hand;
+}
+.nav-icon-sm:hover {
+    -fx-text-fill: #e879f9;
+}
+
+/* ========== Colonne discussions (liste) — plus de fond blanc Modena ========== */
+.sidebar {
+    -fx-background-color: rgba(12, 6, 22, 0.92);
+    -fx-border-color: transparent rgba(124, 58, 237, 0.22) transparent transparent;
+    -fx-border-width: 0 1 0 0;
+}
+
+.sidebar-header-title {
+    -fx-font-size: 17px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #f0abfc;
+    -fx-effect: dropshadow(gaussian, rgba(192, 38, 252, 0.45), 10, 0.25, 0, 0);
+}
+
+.search-input-neon {
+    -fx-background-color: rgba(8, 4, 16, 0.95);
+    -fx-text-fill: #faf5ff;
+    -fx-prompt-text-fill: #7c6a92;
+    -fx-background-radius: 22;
+    -fx-padding: 10 18;
+    -fx-border-color: rgba(168, 85, 247, 0.4);
+    -fx-border-radius: 22;
+    -fx-border-width: 1;
+    -fx-font-size: 13px;
+}
+.search-input-neon:focused {
+    -fx-border-color: #e879f9;
+    -fx-effect: dropshadow(gaussian, rgba(192, 38, 252, 0.35), 12, 0.2, 0, 0);
+}
+
+/* Liste contacts : fond sombre, sélection VIOLET (plus de bleu Windows) */
+.neon-list {
+    -fx-background-color: transparent;
+    -fx-control-inner-background: rgba(10, 5, 18, 0.5);
+    -fx-padding: 4 6 12 6;
+}
+.neon-list .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #f5f3ff;
+    -fx-padding: 6 10;
+}
+.neon-list .list-cell:filled:selected,
+.neon-list .list-cell:filled:selected:focused {
+    -fx-background-color: linear-gradient(to right, rgba(124, 58, 237, 0.55), rgba(168, 85, 247, 0.35));
+    -fx-background-insets: 0;
+    -fx-background-radius: 14;
+}
+.neon-list .list-cell:filled:hover {
+    -fx-background-color: rgba(168, 85, 247, 0.2);
+    -fx-background-radius: 14;
+}
+.neon-list .list-cell:empty {
+    -fx-background-color: transparent;
+}
+
+.btn-plus-neon {
+    -fx-background-color: rgba(124, 58, 237, 0.35);
+    -fx-text-fill: #f0abfc;
+    -fx-font-weight: bold;
+    -fx-font-size: 16px;
+    -fx-background-radius: 12;
+    -fx-min-width: 34;
+    -fx-min-height: 34;
+    -fx-cursor: hand;
+    -fx-border-color: rgba(192, 38, 252, 0.45);
+    -fx-border-radius: 12;
+}
+.btn-plus-neon:hover {
+    -fx-background-color: rgba(168, 85, 247, 0.5);
+    -fx-effect: dropshadow(gaussian, rgba(192, 38, 252, 0.5), 12, 0.2, 0, 0);
+}
+
+/* ========== Zone conversation principale ========== */
+.chat-area {
+    -fx-background-color: rgba(8, 5, 14, 0.88);
+}
+
+.messages-scroll-neon {
+    -fx-background-color: rgba(6, 3, 12, 0.75);
+    -fx-border-color: transparent;
+}
+.messages-scroll-neon .viewport {
+    -fx-background-color: rgba(6, 3, 12, 0.75);
+}
+
+.messages-container-neon {
+    -fx-background-color: transparent;
+    -fx-padding: 12 16 20 16;
+}
+
+.empty-placeholder {
+    -fx-background-color: rgba(6, 3, 12, 0.6);
+}
+.placeholder-text {
+    -fx-text-fill: #9a8fb0;
+    -fx-font-size: 14px;
+}
+
+.input-area-neon {
+    -fx-background-color: rgba(10, 6, 18, 0.95);
+    -fx-padding: 12 16 16 16;
+    -fx-border-color: transparent rgba(124, 58, 237, 0.2) transparent transparent;
+    -fx-border-width: 1 0 0 0;
+}
+
+.btn-minimize {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-text-fill: #e9d5ff;
+    -fx-font-size: 14px;
+    -fx-min-width: 32;
+    -fx-min-height: 28;
+    -fx-background-radius: 8;
+    -fx-cursor: hand;
+}
+.btn-minimize:hover {
+    -fx-background-color: rgba(168, 85, 247, 0.35);
+}
+
+.btn-close-modern {
+    -fx-background-color: rgba(244, 63, 94, 0.25);
+    -fx-text-fill: #fecdd3;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-min-width: 32;
+    -fx-min-height: 28;
+    -fx-background-radius: 8;
+    -fx-cursor: hand;
+}
+.btn-close-modern:hover {
+    -fx-background-color: rgba(244, 63, 94, 0.45);
+}
+
+.placeholder-label {
+    -fx-text-fill: #7c6a92;
+    -fx-font-size: 12px;
+}
+
+/* ========== Paramètres (hors auth-box) ========== */
+.settings-box {
+    -fx-padding: 28 36;
+    -fx-background-color: rgba(8, 4, 16, 0.88);
+    -fx-background-radius: 24;
+    -fx-border-color: rgba(168, 85, 247, 0.4);
+    -fx-border-radius: 24;
+    -fx-border-width: 1.2;
+}
+.field-label {
+    -fx-font-size: 11px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #c4b4dc;
+    -fx-letter-spacing: 0.08em;
+}
+.settings-box .text-field {
+    -fx-background-color: rgba(12, 6, 22, 0.95);
+    -fx-text-fill: white;
+    -fx-prompt-text-fill: #7c6a92;
+    -fx-background-radius: 16;
+    -fx-padding: 12 16;
+    -fx-border-color: rgba(168, 85, 247, 0.35);
+    -fx-border-radius: 16;
+}
+.settings-box .text-field:focused {
+    -fx-border-color: #e879f9;
+}
+.settings-box .button.btn-neon {
+    -fx-background-color: linear-gradient(to right, #7c3aed, #c026fc);
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-background-radius: 14;
+    -fx-padding: 12 20;
+}
+.settings-box .button.btn-link {
+    -fx-background-color: transparent;
+    -fx-text-fill: #d8b4fe;
+    -fx-border-width: 0;
+    -fx-cursor: hand;
+}

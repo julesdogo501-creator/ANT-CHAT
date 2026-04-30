@@ -116,7 +116,7 @@ public class MainController {
                     if (action.equals("register")) {
                         Platform.runLater(() -> {
                             authMessage.setText("Compte créé ! Connexion...");
-                            authMessage.setStyle("-fx-text-fill: #10b981;");
+                            authMessage.setStyle("-fx-text-fill: #e879f9;");
                             authenticate("login");
                         });
                     } else {

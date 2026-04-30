@@ -2,6 +2,7 @@ const API_URL = 'https://ant-chat-production.up.railway.app/api';
 let stompClient = null;
 let currentUser = null;
 let currentChatUserId = null; // null => Global, id => Private
+let currentGroupId = null;
 
 // DOM
 const authScreen        = document.getElementById('auth-screen');
@@ -11,18 +12,38 @@ const passwordInput     = document.getElementById('password');
 const contactList       = document.getElementById('contact-list');
 const messagesContainer = document.getElementById('messages-container');
 const messageForm       = document.getElementById('message-form');
+const messageInput      = document.getElementById('message-input');
 const currentChatNameEl = document.getElementById('current-chat-name');
 const btnFile           = document.getElementById('btn-file');
 const fileInput         = document.getElementById('file-input');
 const btnEmoji          = document.getElementById('btn-emoji');
+const authMsg           = document.getElementById('auth-message');
+const annuaireModal     = document.getElementById('annuaire-modal');
+const annuaireList      = document.getElementById('annuaire-list');
+const annuaireSearch    = document.getElementById('annuaire-search-input');
 
 let emojiPicker = null;
 
 // État : historique en mémoire
 const messageHistory = {
     global: [],
-    private: {} // { userId: [messages...] }
+    private: {}, // { userId: [messages...] }
+    groups: {}   // { groupId: [messages...] }
 };
+const subscribedGroupIds = new Set();
+
+// Groups
+const createGroupModal   = document.getElementById('create-group-modal');
+const addMembersModal    = document.getElementById('add-members-modal');
+const createGroupForm    = document.getElementById('create-group-form');
+const createGroupMsg     = document.getElementById('create-group-msg');
+const groupNameInput     = document.getElementById('group-name');
+const addMembersMsg      = document.getElementById('add-members-msg');
+const membersList        = document.getElementById('members-list');
+const membersSearchInput = document.getElementById('members-search-input');
+let allUsersForGroups   = [];
+let currentGroupForMembers = null;
+let allUsers = [];
 
 // ─── Auth ──────────────────────────────────────────────────────────────
 document.getElementById('btn-login').addEventListener('click',    (e) => handleAuth(e, 'login'));
@@ -117,32 +138,72 @@ function initFileUpload() {
 
 // ─── WebSocket ─────────────────────────────────────────────────────────
 function connectWebSocket() {
+    if (wsConnected) return;
+    if (wsConnecting) return;
+    wsConnecting = true;
+    if (stompClient) {
+        try { stompClient.disconnect(); } catch (e) {}
+        stompClient = null;
+    }
+
     const socket = new SockJS('https://ant-chat-production.up.railway.app/ws');
     stompClient = Stomp.over(socket);
     stompClient.debug = null;
 
     stompClient.connect({}, () => {
+        wsConnected = true;
+        wsConnecting = false;
         stompClient.subscribe('/topic/global', (payload) => {
             const msg = JSON.parse(payload.body);
+            const key = getMessageKey(msg);
+            if (messageHistory.global.some(m => getMessageKey(m) === key)) return;
             messageHistory.global.push(msg);
-            if (currentChatUserId === null) displayMessage(msg);
+            if (currentGroupId === null && currentChatUserId === null) displayMessage(msg);
         });
 
         stompClient.subscribe(`/topic/private/${currentUser.id}`, (payload) => {
             const msg = JSON.parse(payload.body);
             const peerId = (msg.sender.id == currentUser.id) ? msg.receiver.id : msg.sender.id;
             if (!messageHistory.private[peerId]) messageHistory.private[peerId] = [];
+            const key = getMessageKey(msg);
+            if (messageHistory.private[peerId].some(m => getMessageKey(m) === key)) return;
             messageHistory.private[peerId].push(msg);
-            if (currentChatUserId == peerId) displayMessage(msg);
+            if (currentChatUserId == peerId && currentGroupId === null) displayMessage(msg);
         });
+
+        if (currentGroupId !== null) {
+            subscribeToGroup(currentGroupId);
+        }
+    }, () => {
+        wsConnected = false;
+        wsConnecting = false;
     });
+}
+
+function subscribeToGroup(groupId) {
+    if (!stompClient || !wsConnected || !groupId || subscribedGroupIds.has(groupId)) return;
+
+    stompClient.subscribe(`/topic/group/${groupId}`, (payload) => {
+        const msg = JSON.parse(payload.body);
+        if (!messageHistory.groups[groupId]) messageHistory.groups[groupId] = [];
+        const key = getMessageKey(msg);
+        if (messageHistory.groups[groupId].some(m => getMessageKey(m) === key)) return;
+        messageHistory.groups[groupId].push(msg);
+        if (currentGroupId == groupId) displayMessage(msg);
+    });
+
+    subscribedGroupIds.add(groupId);
 }
 
 // ─── Contacts (sidebar) ────────────────────────────────────────────────
 async function loadContacts() {
     try {
-        const res = await fetch(`${API_URL}/users`);
-        const users = await res.json();
+        const resUsers = await fetch(`${API_URL}/users`);
+        const users = await resUsers.json();
+        allUsersForGroups = users;
+
+        const resGroups = await fetch(`${API_URL}/groups/user/${currentUser.id}`);
+        const groups = resGroups.ok ? await resGroups.json() : [];
 
         contactList.innerHTML = '';
 
@@ -151,9 +212,44 @@ async function loadContacts() {
         globalLi.dataset.userId = 'global';
         globalLi.innerHTML = `<i class="ph-fill ph-globe"></i> <span>Chat Global</span>`;
         globalLi.addEventListener('click', function () {
+            currentGroupId = null;
             openChat(null, 'Chat Global', globalLi);
         });
         contactList.appendChild(globalLi);
+
+        // Groupes
+        groups.forEach(group => {
+            const li = document.createElement('li');
+            li.classList.add('group');
+            li.dataset.groupId = String(group.id);
+            li.innerHTML = `<i class="ph-fill ph-users"></i> <span>${group.name}</span>`;
+            li.addEventListener('click', function () {
+                currentChatUserId = null;
+                currentGroupId = group.id;
+                openChat(null, group.name, li);
+                
+                // Ajouter un bouton "Ajouter des membres" si admin
+                if (group.admin.id == currentUser.id) {
+                    setTimeout(() => {
+                        const existingBtn = document.getElementById('btn-add-members-group');
+                        if (!existingBtn) {
+                            const headerActions = document.querySelector('.header-actions');
+                            const btn = document.createElement('button');
+                            btn.id = 'btn-add-members-group';
+                            btn.className = 'btn-icon';
+                            btn.title = 'Ajouter des membres';
+                            btn.innerHTML = '<i class="ph-fill ph-user-plus"></i> <span>Ajouter</span>';
+                            btn.addEventListener('click', (e) => {
+                                e.preventDefault();
+                                openAddMembersModal(group.id);
+                            });
+                            headerActions.insertBefore(btn, headerActions.firstChild);
+                        }
+                    }, 100);
+                }
+            });
+            contactList.appendChild(li);
+        });
 
         // Utilisateurs
         users.forEach(user => {
@@ -162,7 +258,9 @@ async function loadContacts() {
             li.dataset.userId = String(user.id);
             li.innerHTML = `<i class="ph-fill ph-user"></i> <span>${user.username}</span>`;
             li.addEventListener('click', function () {
+                currentGroupId = null;
                 openChat(user.id, user.username, li);
+                document.getElementById('btn-add-members-group')?.remove();
             });
             contactList.appendChild(li);
         });
@@ -181,7 +279,14 @@ async function openChat(peerId, name, listItem) {
     if (listItem) listItem.classList.add('active');
 
     try {
-        if (peerId === null) {
+        if (currentGroupId !== null) {
+            if (!messageHistory.groups[currentGroupId]) {
+                const res = await fetch(`${API_URL}/groups/${currentGroupId}/history`);
+                messageHistory.groups[currentGroupId] = await res.json();
+            }
+            messageHistory.groups[currentGroupId].forEach(displayMessage);
+            subscribeToGroup(currentGroupId);
+        } else if (peerId === null) {
             // Chat Global
             if (messageHistory.global.length === 0) {
                 const res = await fetch(`${API_URL}/users/history/global`);
@@ -212,12 +317,23 @@ function sendMessage(content, fileUrl = null, fileType = null) {
     const payload = {
         content: content || (fileUrl ? "[Fichier]" : ""),
         senderId: currentUser.id,
-        receiverId: currentChatUserId,
+        receiverId: null,
+        groupId: null,
         fileUrl: fileUrl,
         fileType: fileType
     };
 
-    const destination = currentChatUserId === null ? '/app/chat.sendMessage' : '/app/chat.privateMessage';
+    let destination;
+    if (currentGroupId !== null) {
+        payload.groupId = currentGroupId;
+        destination = '/app/chat.groupMessage';
+    } else if (currentChatUserId === null) {
+        destination = '/app/chat.sendMessage';
+    } else {
+        payload.receiverId = currentChatUserId;
+        destination = '/app/chat.privateMessage';
+    }
+
     stompClient.send(destination, {}, JSON.stringify(payload));
 }
 
@@ -266,11 +382,6 @@ function displayMessage(message) {
 }
 
 // ─── Annuaire ──────────────────────────────────────────────────────────
-const annuaireModal  = document.getElementById('annuaire-modal');
-const annuaireList   = document.getElementById('annuaire-list');
-const annuaireSearch = document.getElementById('annuaire-search-input');
-let allUsers = [];
-
 document.getElementById('btn-annuaire').addEventListener('click', openAnnuaire);
 document.getElementById('btn-close-annuaire').addEventListener('click', closeAnnuaire);
 
@@ -367,13 +478,148 @@ document.getElementById('btn-logout').addEventListener('click', () => {
     }
     currentUser = null;
     currentChatUserId = null;
+    currentGroupId = null;
     messageHistory.global = [];
     messageHistory.private = {};
     allUsers = [];
     annuaireModal.classList.add('hidden');
+    createGroupModal.classList.add('hidden');
+    addMembersModal.classList.add('hidden');
     chatScreen.classList.add('hidden');
     authScreen.classList.remove('hidden');
     usernameInput.value = '';
     passwordInput.value = '';
     authMsg.textContent = '';
 });
+
+// ─── Gestion des Groupes ───────────────────────────────────────────────
+document.getElementById('btn-create-group').addEventListener('click', () => {
+    createGroupModal.classList.remove('hidden');
+    groupNameInput.value = '';
+    createGroupMsg.textContent = '';
+});
+
+document.getElementById('btn-close-create-group').addEventListener('click', () => {
+    createGroupModal.classList.add('hidden');
+});
+
+createGroupModal.addEventListener('click', (e) => {
+    if (e.target === createGroupModal) {
+        createGroupModal.classList.add('hidden');
+    }
+});
+
+createGroupForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const groupName = groupNameInput.value.trim();
+    if (!groupName) return;
+
+    try {
+        const response = await fetch(`${API_URL}/groups?name=${encodeURIComponent(groupName)}&adminId=${currentUser.id}`, {
+            method: 'POST'
+        });
+
+        if (response.ok) {
+            const group = await response.json();
+            createGroupMsg.style.color = '#10b981';
+            createGroupMsg.textContent = 'Groupe créé avec succès !';
+            groupNameInput.value = '';
+            
+            setTimeout(() => {
+                createGroupModal.classList.add('hidden');
+                loadContacts();
+            }, 1000);
+        } else {
+            createGroupMsg.style.color = '#ef4444';
+            createGroupMsg.textContent = 'Erreur lors de la création du groupe';
+        }
+    } catch (e) {
+        createGroupMsg.style.color = '#ef4444';
+        createGroupMsg.textContent = 'Erreur : ' + e.message;
+    }
+});
+
+document.getElementById('btn-close-add-members').addEventListener('click', () => {
+    addMembersModal.classList.add('hidden');
+});
+
+addMembersModal.addEventListener('click', (e) => {
+    if (e.target === addMembersModal) {
+        addMembersModal.classList.add('hidden');
+    }
+});
+
+membersSearchInput.addEventListener('input', () => {
+    const query = membersSearchInput.value.trim().toLowerCase();
+    const filtered = query ? allUsersForGroups.filter(u => u.username.toLowerCase().includes(query)) : allUsersForGroups;
+    renderMembersToAdd(filtered);
+});
+
+function openAddMembersModal(groupId) {
+    currentGroupForMembers = groupId;
+    addMembersModal.classList.remove('hidden');
+    membersSearchInput.value = '';
+    addMembersMsg.textContent = '';
+
+    try {
+        renderMembersToAdd(allUsersForGroups);
+    } catch (e) {
+        addMembersMsg.style.color = '#ef4444';
+        addMembersMsg.textContent = 'Erreur : ' + e.message;
+    }
+}
+
+function renderMembersToAdd(users) {
+    membersList.innerHTML = '';
+
+    users.forEach(user => {
+        if (user.id == currentUser.id) return;
+
+        const li = document.createElement('li');
+        const avatar = document.createElement('div');
+        avatar.className = 'user-avatar';
+        avatar.textContent = user.username.substring(0, 1).toUpperCase();
+
+        const details = document.createElement('div');
+        details.className = 'user-details';
+        details.innerHTML = `<div class="uname">${user.username}</div>`;
+
+        const btnAdd = document.createElement('button');
+        btnAdd.className = 'btn-add';
+        btnAdd.textContent = 'Ajouter';
+        btnAdd.addEventListener('click', (e) => {
+            e.stopPropagation();
+            addMemberToGroup(currentGroupForMembers, user.id, btnAdd);
+        });
+
+        li.appendChild(avatar);
+        li.appendChild(details);
+        li.appendChild(btnAdd);
+        membersList.appendChild(li);
+    });
+
+    if (membersList.children.length === 0) {
+        membersList.innerHTML = '<li style="color:var(--text-secondary);padding:20px;text-align:center;">Aucun utilisateur trouvé</li>';
+    }
+}
+
+async function addMemberToGroup(groupId, userId, buttonElement) {
+    try {
+        const response = await fetch(`${API_URL}/groups/${groupId}/members/${userId}`, {
+            method: 'POST'
+        });
+
+        if (response.ok) {
+            addMembersMsg.style.color = '#10b981';
+            addMembersMsg.textContent = 'Membre ajouté !';
+            buttonElement.disabled = true;
+            buttonElement.textContent = 'Ajouté ✓';
+        } else {
+            addMembersMsg.style.color = '#ef4444';
+            addMembersMsg.textContent = 'Erreur lors de l\'ajout';
+        }
+    } catch (e) {
+        addMembersMsg.style.color = '#ef4444';
+        addMembersMsg.textContent = 'Erreur : ' + e.message;
+    }
+}

@@ -1,0 +1,90 @@
+/**
+ * ANT CHAT — Connexion & inscription (même écran : champs + Se connecter / Créer un compte)
+ * Chargé après style.css depuis main.fxml
+ */
+
+.auth-box {
+    -fx-padding: 32 44 36 44;
+    -fx-background-color: rgba(6, 3, 14, 0.82);
+    -fx-background-radius: 26;
+    -fx-border-color: linear-gradient(to bottom right, rgba(192, 38, 252, 0.65), rgba(34, 211, 238, 0.35));
+    -fx-border-radius: 26;
+    -fx-border-width: 1.5;
+    -fx-effect: dropshadow(gaussian, rgba(124, 58, 237, 0.5), 32, 0.2, 0, 4);
+}
+
+.auth-box .brand-title-lg {
+    -fx-font-size: 34px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f0abfc;
+    -fx-effect: dropshadow(gaussian, rgba(192, 38, 252, 0.9), 22, 0.35, 0, 0);
+}
+
+.auth-box .subtitle {
+    -fx-font-size: 13px;
+    -fx-text-fill: #a89bb8;
+    -fx-wrap-text: true;
+    -fx-max-width: 340px;
+    -fx-text-alignment: center;
+    -fx-alignment: center;
+}
+
+.auth-box .text-field,
+.auth-box .password-field {
+    -fx-background-color: rgba(8, 4, 16, 0.95);
+    -fx-text-fill: #ffffff;
+    -fx-prompt-text-fill: #8b7fa3;
+    -fx-background-radius: 999;
+    -fx-padding: 13 22;
+    -fx-border-color: rgba(168, 85, 247, 0.5);
+    -fx-border-radius: 999;
+    -fx-border-width: 1.2;
+    -fx-font-size: 14px;
+}
+
+.auth-box .text-field:focused,
+.auth-box .password-field:focused {
+    -fx-border-color: #e879f9;
+    -fx-effect: dropshadow(gaussian, rgba(192, 38, 252, 0.45), 14, 0.25, 0, 0);
+}
+
+.auth-box .button.btn-neon {
+    -fx-background-color: linear-gradient(to right, #7c3aed, #c026fc 55%, #a855f7);
+    -fx-text-fill: #ffffff;
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+    -fx-background-radius: 999;
+    -fx-padding: 14 28;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(192, 38, 252, 0.65), 20, 0.3, 0, 3);
+}
+
+.auth-box .button.btn-neon:hover {
+    -fx-effect: dropshadow(gaussian, rgba(232, 121, 249, 0.85), 26, 0.35, 0, 3);
+}
+
+.auth-box .button.btn-neon:pressed {
+    -fx-translate-y: 1;
+}
+
+.auth-box .button.btn-link {
+    -fx-background-color: transparent;
+    -fx-text-fill: #d8b4fe;
+    -fx-border-width: 0;
+    -fx-border-color: transparent;
+    -fx-cursor: hand;
+    -fx-font-size: 13px;
+    -fx-font-weight: 600;
+}
+
+.auth-box .button.btn-link:hover {
+    -fx-text-fill: #ffffff;
+}
+
+.auth-box .error-msg {
+    -fx-text-fill: #fda4af;
+    -fx-font-size: 12px;
+    -fx-wrap-text: true;
+    -fx-max-width: 340px;
+    -fx-text-alignment: center;
+}

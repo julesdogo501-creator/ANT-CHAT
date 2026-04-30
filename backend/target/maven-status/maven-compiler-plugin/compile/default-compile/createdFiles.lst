@@ -19,4 +19,5 @@ com\antchat\model\ChatGroup.class
 com\antchat\config\DatabaseCharsetConfig.class
 com\antchat\repository\UserRepository.class
 com\antchat\config\DataSeeder.class
+com\antchat\controller\HomeController.class
 com\antchat\security\SecurityConfig.class
