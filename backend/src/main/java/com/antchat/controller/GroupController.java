@@ -30,8 +30,8 @@ public class GroupController {
     }
 
     @PostMapping("/{groupId}/members/{userId}")
-    public ChatGroup addMember(@PathVariable Long groupId, @PathVariable Long userId) {
-        return groupService.addMember(groupId, userId);
+    public ChatGroup addMember(@PathVariable Long groupId, @PathVariable Long userId, @RequestParam Long requesterId) {
+        return groupService.addMember(groupId, userId, requesterId);
     }
 
     @GetMapping("/{groupId}/history")

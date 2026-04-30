@@ -23,6 +23,13 @@ public class GroqService {
 
     public String generateResponse(String userMessage) {
         System.out.println("[GroqService] Génération d'une réponse pour : " + userMessage);
+        System.out.println("[GroqService] API Key présente : " + (API_KEY != null && !API_KEY.isEmpty()));
+
+        if (API_KEY == null || API_KEY.isEmpty()) {
+            System.err.println("[GroqService] ERREUR : API Key manquante !");
+            return "[AntIA] Désolé, mon cerveau n'est pas configuré correctement. Contacte l'admin !";
+        }
+
         try {
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("model", "llama-3.3-70b-versatile");

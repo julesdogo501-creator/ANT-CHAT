@@ -605,7 +605,7 @@ function renderMembersToAdd(users) {
 
 async function addMemberToGroup(groupId, userId, buttonElement) {
     try {
-        const response = await fetch(`${API_URL}/groups/${groupId}/members/${userId}`, {
+        const response = await fetch(`${API_URL}/groups/${groupId}/members/${userId}?requesterId=${currentUser.id}`, {
             method: 'POST'
         });
 
@@ -615,8 +615,9 @@ async function addMemberToGroup(groupId, userId, buttonElement) {
             buttonElement.disabled = true;
             buttonElement.textContent = 'Ajouté ✓';
         } else {
+            const errorText = await response.text();
             addMembersMsg.style.color = '#ef4444';
-            addMembersMsg.textContent = 'Erreur lors de l\'ajout';
+            addMembersMsg.textContent = errorText || 'Erreur lors de l\'ajout';
         }
     } catch (e) {
         addMembersMsg.style.color = '#ef4444';

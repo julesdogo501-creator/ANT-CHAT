@@ -54,18 +54,27 @@ public class ChatController {
 
         // --- Cerveau Groq (AntIA) ---
         if ("AntIA".equals(receiver.getUsername())) {
-            System.out.println("[ChatController] Déclenchement de la réponse AntIA");
+            System.out.println("[ChatController] Déclenchement de la réponse AntIA pour message : " + chatMessageRequest.getContent());
+
             java.util.concurrent.CompletableFuture.runAsync(() -> {
                 try {
                     String aiResponse = groqService.generateResponse(chatMessageRequest.getContent());
                     Message aiMessage = messageService.savePrivateMessage(receiver, sender, aiResponse, null, null);
-                    
+
                     // On notifie l'utilisateur via Websocket avec le topic privé de l'utilisateur
                     messagingTemplate.convertAndSend("/topic/private/" + sender.getId(), aiMessage);
-                    System.out.println("[ChatController] Réponse AntIA envoyée à " + sender.getUsername());
+                    System.out.println("[ChatController] Réponse AntIA envoyée à " + sender.getUsername() + " : " + aiResponse);
                 } catch (Exception e) {
                     System.err.println("[ChatController] Erreur fatale dans le thread AntIA : " + e.getMessage());
                     e.printStackTrace();
+
+                    // Envoyer un message d'erreur à l'utilisateur
+                    try {
+                        Message errorMessage = messageService.savePrivateMessage(receiver, sender, "[AntIA] Oups, j'ai eu un bug ! Réessaie plus tard.", null, null);
+                        messagingTemplate.convertAndSend("/topic/private/" + sender.getId(), errorMessage);
+                    } catch (Exception ex) {
+                        System.err.println("[ChatController] Impossible d'envoyer le message d'erreur : " + ex.getMessage());
+                    }
                 }
             });
         }
